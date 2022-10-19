@@ -77,9 +77,7 @@ def send_model_update(model_update: modelUpdate_pb2.ModelUpdate):
         'purpose': MODEL_UPDATE_PYTHON_PURPOSE_ID,
         'data': text_format.MessageToString(model_update),
     }
-
     res = requests.post(FORMICA_ENDPOINT, json=payload)
-    print(FORMICA_ENDPOINT)
     if "error" not in res.json():
         return res.json()['blockID']  
     return None

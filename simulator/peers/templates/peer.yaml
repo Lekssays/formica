@@ -8,7 +8,7 @@
     - GOSHIMMER_API_ENDPOINT=http://172.17.0.1:8091
     - GOSHIMMER_WEBSOCKETS_ENDPOINT=ws://172.17.0.1:8091/ws
     - IPFS_API_ENDPOINT=http://172.17.0.1:5001
-    - FORMICA_ENDPOINT=http://172.17.0.1:8090/fromica
+    - FORMICA_ENDPOINT=http://172.17.0.1:8090/formica
     - TMP_FOLDER=/temp/
     - DATA_FOLDER=/data/
     - DISHONEST_PEERS=dishonest_peers

@@ -9,3 +9,7 @@ protocol/consensus/consensus
 *.log
 simulator/peers/client/__pycache__
 simulator/ipfs/*
+.env
+protocol/consensus/peers.json
+simulator/peers/peers.json
+simulator/peers/client/peers.json
