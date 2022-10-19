@@ -5,4 +5,4 @@ protocol/consensus/consensus
 *.pickle
 *.pyc
 *.gz
-
+simulator/peers/client/__pycache__

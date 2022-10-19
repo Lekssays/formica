@@ -18,8 +18,8 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='score.proto',
   package='score',
   syntax='proto3',
-  serialized_options=_b('ZFgithub.com/Lekssays/ProxDAG/network/simulator/peers/client/proto/score'),
-  serialized_pb=_b('\n\x0bscore.proto\x12\x05score\"#\n\x05Score\x12\x0c\n\x04type\x18\x01 \x01(\t\x12\x0c\n\x04path\x18\x02 \x01(\tBHZFgithub.com/Lekssays/ProxDAG/network/simulator/peers/client/proto/scoreb\x06proto3')
+  serialized_options=_b('ZFgithub.com/Lekssays/formica/network/simulator/peers/client/proto/score'),
+  serialized_pb=_b('\n\x0bscore.proto\x12\x05score\"#\n\x05Score\x12\x0c\n\x04type\x18\x01 \x01(\t\x12\x0c\n\x04path\x18\x02 \x01(\tBHZFgithub.com/Lekssays/formica/network/simulator/peers/client/proto/scoreb\x06proto3')
 )
 
 

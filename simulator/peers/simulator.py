@@ -17,7 +17,7 @@ def parse_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-r', '--remove',
                         dest = "remove",
-                        help = "Remove all ProxDAG containers",
+                        help = "Remove all formica containers",
                         default = "false",
                         required = False)
     parser.add_argument('-d', '--dataset',
@@ -149,7 +149,7 @@ def generate_peers(num_peers: int):
         tmp = {
             'pubkey': ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase +  string.digits) for _ in range(25)),
             'id': str(p),
-            'name': "peer" + str(p) + ".proxdag.io",
+            'name': "peer" + str(p) + ".formica.io",
         }
         peers.append(tmp)
     
@@ -211,7 +211,7 @@ def main():
     dc = parse_args().dc
 
     if len(os.getenv("PROTOCOL_PATH")) == 0:
-        print("PROTOCOL_PATH not found! Please run source $HOME/ProxDAG/.env")
+        print("PROTOCOL_PATH not found! Please run source $HOME/formica/.env")
         return
 
     print("Generating docker-compose.yaml")

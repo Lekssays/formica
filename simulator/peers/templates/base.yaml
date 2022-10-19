@@ -3,6 +3,6 @@ version: '3.3'
 networks:
   outside:
     external:
-      name: proxdag
+      name: formica
 
 services:

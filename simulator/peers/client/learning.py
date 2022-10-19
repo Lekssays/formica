@@ -33,8 +33,10 @@ def peer_update(local_model, train_loader, epoch=5, attack_type=None):
             data, target = data, target
             optimizer.zero_grad()
             output = local_model(data)
+
+            # Attack can be added here depending on the dataset
             if attack_type is not None:
-                if dataset == "MNIST" or dataset == "CIFAR":
+                if dataset == "MNIST":
                     for i, t in enumerate(target):
                         if attack_type == 'lf':  # label flipping
                             if t == 1:
@@ -44,17 +46,6 @@ def peer_update(local_model, train_loader, epoch=5, attack_type=None):
                             data[:, :, 27, 27] = torch.max(data)  # set the bottom right pixel to white.
                         elif attack_type == 'untargeted':
                             target[i] = random.randint(0, 9)
-                        elif attack_type == "untargeted_sybil":  # untargeted with sybils
-                            target[i] = 0
-                elif dataset == "KDD":
-                    for i, t in enumerate(target):
-                        if attack_type == 'lf':  # label flipping
-                            if t == 5:
-                                target[i] = torch.tensor(7)
-                        elif attack_type == 'backdoor':
-                            pass
-                        elif attack_type == 'untargeted':
-                            target[i] = random.randint(0, 22)
                         elif attack_type == "untargeted_sybil":  # untargeted with sybils
                             target[i] = 0
             loss = F.nll_loss(output, target)
@@ -76,35 +67,6 @@ def aggregate(peers_indices, peers_weights=[]):
     return peers_weights[-1]
 
 
-def load_kdd_dataset():
-    kdd_df = pd.read_csv(os.getenv("DATA_FOLDER") + 'kddcup.csv', delimiter=',', header=None)
-    col_names = [str(i) for i in range(42)]
-    kdd_df.columns=  col_names
-    values_1 = kdd_df['1'].unique()
-    values_2 = kdd_df['2'].unique()
-    values_3 = kdd_df['3'].unique()
-    targets = kdd_df['41'].unique()
-
-    for i, v in enumerate(values_1):
-        kdd_df.loc[kdd_df['1'] == v, '1'] = i
-    for i, v in enumerate(values_2):
-        kdd_df.loc[kdd_df['2'] == v, '2'] = i
-    for i, v in enumerate(values_3):
-        kdd_df.loc[kdd_df['3'] == v, '3'] = i
-    for i, v in enumerate(targets):
-        b = np.zeros(len(targets))
-        b[i] = 1
-        kdd_df.loc[kdd_df['41'] == v, '41'] = i
-
-    for column in kdd_df.columns:
-        kdd_df[column] = pd.to_numeric(kdd_df[column])
-    y = np.array(kdd_df.iloc[:,-1].values)
-    x = np.array(kdd_df.iloc[:,0:-1].values)
-
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=42)
-    return x_train, x_test, y_train, y_test
-
-
 def test(local_model, test_loader, attack):
     """This function test the global model on test data and returns test loss and test accuracy """
     local_model.eval()
@@ -123,13 +85,9 @@ def test(local_model, test_loader, attack):
             pred = output.argmax(dim=1, keepdim=True)  
             correct += pred.eq(target.view_as(pred)).sum().item()
 
-            if dataset == "MNIST" or dataset == "CIFAR":
+            if dataset == "MNIST":
                 for i, t in enumerate(target):
                     if t == 1 and pred[i] == 7:
-                        attack += 1
-            elif dataset == "KDD":
-                for i, t in enumerate(target):
-                    if t == 5 and pred[i] == 7:
                         attack += 1
 
     test_loss /= len(test_loader.dataset)
@@ -154,35 +112,6 @@ def load_data():
         
         # Loading the test data and thus converting them into a test_loader
         test_loader = torch.utils.data.DataLoader(testdata, batch_size=batch_size, shuffle=True)
-    elif dataset == "CIFAR":
-        # Image augmentation
-        transform_train = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-        ])
-
-        # Loading the test iamges and thus converting them into a test_loader
-        test_loader = torch.utils.data.DataLoader(datasets.CIFAR10(
-                    os.getenv("DATA_FOLDER"),
-                    train=False,
-                    transform=transforms.Compose([transforms.ToTensor(),transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])),
-                    batch_size=batch_size,
-                    shuffle=True
-                )
-    elif dataset == "KDD":
-        train_x, test_x, train_y, test_y = load_kdd_dataset()
-
-        # Loading the test data and thus converting them into a test_loader
-        x = torch.tensor(test_x)
-        y = torch.tensor(test_y)
-        np.random.seed(42)
-        p = np.random.permutation(len(x))
-        x = x[p]
-        y= y[p]
-        dat = TensorDataset(x, y)
-        test_loader = torch.utils.data.DataLoader(dat,  batch_size=batch_size, shuffle=True)
 
     return test_loader, train_x, train_y
 
@@ -192,10 +121,6 @@ def initialize(modelID):
 
     if dataset == "MNIST":
         local_model =  models.SFMNet(784, 10)
-    elif dataset == "CIFAR":
-        local_model =  models.VGG('VGG19')
-    elif dataset == "KDD":
-        local_model =  models.SFMNet(n_features= 41, n_classes= 23)
 
     torch.save(local_model.state_dict(), os.getenv("TMP_FOLDER") + modelID + ".pt")
 
@@ -260,16 +185,10 @@ def train(local_model, alpha="100", attack_type="lf"):
     attack = 0
     loss = 0
     my_id = int(os.getenv("MY_ID"))
-    if dataset == "MNIST" or dataset == "CIFAR":
+    if dataset == "MNIST":
         train_obj = pickle.load(open(os.getenv("DATA_FOLDER") + dataset + "/" + str(my_id) + "/train_" + alpha +"_.pickle", "rb"))
         x = torch.stack(train_obj.x)
         y = torch.tensor(train_obj.y)
-        dat = TensorDataset(x, y)
-        train_loader = DataLoader(dat, batch_size=batch_size, shuffle=True)
-    elif dataset == "KDD":
-        _, train_x, train_y = load_data()
-        x = torch.tensor(train_x[int(my_id* len(train_x)/num_peers):int((my_id+1)*len(train_x)/num_peers)])
-        y = torch.tensor(train_y[int(my_id* len(train_x)/num_peers):int((my_id+1)*len(train_x)/num_peers)])
         dat = TensorDataset(x, y)
         train_loader = DataLoader(dat, batch_size=batch_size, shuffle=True)
 
@@ -291,18 +210,6 @@ def load_weights_into_model(weights):
         state_dict['fc.weight'] = weights['fc.weight']
         state_dict['fc.bias'] = weights['fc.bias']
         local_model.load_state_dict(state_dict)
-    elif dataset == "CIFAR":
-        local_model =  models.VGG('VGG19')
-        state_dict = local_model.state_dict()
-        state_dict['fc.weight'] = weights['fc.weight']
-        state_dict['fc.bias'] = weights['fc.bias']
-        local_model.load_state_dict(state_dict)
-    elif dataset == "KDD":
-        local_model =  models.SFMNet(n_features= 41, n_classes= 23)
-        state_dict = local_model.state_dict()
-        state_dict['fc.weight'] = weights['fc.weight']
-        state_dict['fc.bias'] = weights['fc.bias']
-        local_model.load_state_dict(state_dict)
 
     return local_model
 
@@ -313,12 +220,6 @@ def get_optimizer(local_model):
     if dataset == "MNIST":
         lr = 0.01
         opt = optim.SGD(local_model.parameters(), lr=lr)
-    elif dataset == "CIFAR":
-        lr = 0.1
-        opt = optim.SGD(local_model.parameters(), lr=lr)
-    elif dataset == "KDD":
-        lr = 0.001
-        opt = optim.SGD(local_model.parameters(), lr=lr)
     return opt
 
 
@@ -327,10 +228,6 @@ def load_local_model():
     model = None
     if dataset == "MNIST":
         model = SFMNet(784, 10)
-    elif dataset == "CIFAR":
-        model = VGG('VGG19')
-    elif dataset == "KDD":
-        model = SFMNet(n_features= 41, n_classes= 23)
     return model
 
 

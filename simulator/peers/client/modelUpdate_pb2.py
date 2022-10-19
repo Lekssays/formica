@@ -18,8 +18,8 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='modelUpdate.proto',
   package='modelUpdate',
   syntax='proto3',
-  serialized_options=_b('Z<github.com/Lekssays/ProxDAG/protocol/graph/proto/modelUpdate'),
-  serialized_pb=_b('\n\x11modelUpdate.proto\x12\x0bmodelUpdate\"\x84\x01\n\x0bModelUpdate\x12\x0f\n\x07modelID\x18\x01 \x01(\t\x12\x0f\n\x07parents\x18\x02 \x03(\t\x12\x0f\n\x07weights\x18\x03 \x01(\t\x12\x0e\n\x06pubkey\x18\x04 \x01(\t\x12\x11\n\ttimestamp\x18\x05 \x01(\r\x12\x10\n\x08\x61\x63\x63uracy\x18\x06 \x01(\x02\x12\r\n\x05model\x18\x07 \x01(\tB>Z<github.com/Lekssays/ProxDAG/protocol/graph/proto/modelUpdateb\x06proto3')
+  serialized_options=_b('Z<github.com/Lekssays/formica/protocol/graph/proto/modelUpdate'),
+  serialized_pb=_b('\n\x11modelUpdate.proto\x12\x0bmodelUpdate\"\x84\x01\n\x0bModelUpdate\x12\x0f\n\x07modelID\x18\x01 \x01(\t\x12\x0f\n\x07parents\x18\x02 \x03(\t\x12\x0f\n\x07weights\x18\x03 \x01(\t\x12\x0e\n\x06pubkey\x18\x04 \x01(\t\x12\x11\n\ttimestamp\x18\x05 \x01(\r\x12\x10\n\x08\x61\x63\x63uracy\x18\x06 \x01(\x02\x12\r\n\x05model\x18\x07 \x01(\tB>Z<github.com/Lekssays/formica/protocol/graph/proto/modelUpdateb\x06proto3')
 )
 
 

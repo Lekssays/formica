@@ -174,7 +174,7 @@ func main() {
 			if verified {
 				fmt.Println("Output is verified :)")
 			} else {
-				fmt.Println("Output is NOT verified :)")
+				fmt.Println("Output is NOT verified :(")
 			}
 		} else if args[0] == "init" {
 			fmt.Println("Initializing the system")
@@ -186,12 +186,6 @@ func main() {
 			if dataset == "MNIST" {
 				features = 784
 				classes = 10
-			} else if dataset == "CIFAR" {
-				features = 512
-				classes = 10
-			} else if dataset == "KDD" {
-				features = 41
-				classes = 23
 			}
 
 			err := consensus.Initialize(modelID, classes, features)

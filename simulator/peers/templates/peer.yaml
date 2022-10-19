@@ -7,8 +7,8 @@
     - MY_PUB_KEY=my_pub_key
     - GOSHIMMER_API_ENDPOINT=http://172.17.0.1:8091
     - GOSHIMMER_WEBSOCKETS_ENDPOINT=ws://172.17.0.1:8091/ws
-    - IPFS_API_ENDPOINT=http://ipfs.proxdag.io:5001
-    - PROXDAG_ENDPOINT=http://172.17.0.1:8090/proxdag
+    - IPFS_API_ENDPOINT=http://ipfs.fromica.io:5001
+    - FORMICA_ENDPOINT=http://172.17.0.1:8090/fromica
     - TMP_FOLDER=/temp/
     - DATA_FOLDER=/data/
     - DISHONEST_PEERS=dishonest_peers
