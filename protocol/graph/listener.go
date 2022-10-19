@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	GOSHIMMER_WEBSOCKETS_ENDPOINT = "0.0.0.0:8081"
+	GOSHIMMER_WEBSOCKETS_ENDPOINT = "0.0.0.0:8091"
 )
 
 type Data struct {
