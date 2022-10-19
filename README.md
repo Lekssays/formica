@@ -10,6 +10,8 @@ A DAG-based Fully-Decentralized Learning Framework
 
 - Install docker v20.10.17 and docker-compose v2.6.1
 
+- Install Redis
+
 - Clone GoShimmer (IOTA 2.0) v0.9.8 in Home Directory: 
 
 ```
