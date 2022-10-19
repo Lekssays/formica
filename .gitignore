@@ -5,4 +5,7 @@ protocol/consensus/consensus
 *.pickle
 *.pyc
 *.gz
+*.csv
+*.log
 simulator/peers/client/__pycache__
+simulator/ipfs/*

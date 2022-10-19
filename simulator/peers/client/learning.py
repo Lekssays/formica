@@ -6,7 +6,6 @@ import utils
 import random
 
 import numpy as np
-import pandas as pd
 
 import torch
 import torch.nn.functional as F
@@ -15,8 +14,7 @@ import torch.optim as optim
 from os.path import exists
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, TensorDataset
-from sklearn.model_selection import train_test_split
-from models import VGG, SFMNet
+from models import SFMNet
 
 torch.backends.cudnn.benchmark=True
 torch.manual_seed(42)

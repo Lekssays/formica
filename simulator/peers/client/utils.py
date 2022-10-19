@@ -1,4 +1,3 @@
-import asyncio
 import base64
 import modelUpdate_pb2
 import score_pb2
@@ -14,7 +13,7 @@ import redis
 
 import numpy as np
 
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 from datetime import datetime
 from google.protobuf import text_format
 from io import BytesIO
@@ -22,7 +21,7 @@ from tempfile import TemporaryFile
 
 GOSHIMMER_API_ENDPOINT = os.getenv("GOSHIMMER_API_ENDPOINT") # http://0.0.0.0:8091
 IPFS_API_ENDPOINT = os.getenv("IPFS_API_ENDPOINT") # http://0.0.0.0:5001
-FORMICA_ENDPOINT = os.getenv("FORMICA_ENDPOINT") # "http://0.0.0.0:8080/formica"
+FORMICA_ENDPOINT = os.getenv("FORMICA_ENDPOINT") # "http://0.0.0.0:8090/formica"
 MY_PUB_KEY = os.getenv("MY_PUB_KEY")
 
 MODEL_UPDATE_PYTHON_PURPOSE_ID = 16
@@ -80,7 +79,7 @@ def send_model_update(model_update: modelUpdate_pb2.ModelUpdate):
     }
 
     res = requests.post(FORMICA_ENDPOINT, json=payload)
-
+    print(FORMICA_ENDPOINT)
     if "error" not in res.json():
         return res.json()['blockID']  
     return None

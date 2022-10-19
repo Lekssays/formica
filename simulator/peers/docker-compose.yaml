@@ -3,20 +3,66 @@ version: '3.3'
 networks:
   outside:
     external:
-      name: proxdag
+      name: formica
 
 services:
-  peer0.proxdag.io:
-    container_name: peer0.proxdag.io
+  peer0.formica.io:
+    container_name: peer0.formica.io
     image: lekssays/proxdag:latest
     environment:
-    - MY_NAME=peer0.proxdag.io
+    - MY_NAME=peer0.formica.io
     - MY_ID=0
-    - MY_PUB_KEY=0LrTJbhYPDAUksOenhb34DPS1
+    - MY_PUB_KEY=ckz77w2QtEhONZjd47tmZUBmy
     - GOSHIMMER_API_ENDPOINT=http://172.17.0.1:8091
     - GOSHIMMER_WEBSOCKETS_ENDPOINT=ws://172.17.0.1:8091/ws
-    - IPFS_API_ENDPOINT=http://ipfs.proxdag.io:5001
-    - PROXDAG_ENDPOINT=http://172.17.0.1:8090/proxdag
+    - IPFS_API_ENDPOINT=http://172.17.0.1:5001
+    - FORMICA_ENDPOINT=http://172.17.0.1:8090/fromica
+    - TMP_FOLDER=/temp/
+    - DATA_FOLDER=/data/
+    - DISHONEST_PEERS=dishonest_peers
+    command: /bin/bash /client/hello.sh
+    working_dir: /client
+    volumes:
+    - ./../../protocol:/protocol
+    - ./client/:/client
+    - ./data/:/data
+    networks:
+    - outside
+
+  peer1.formica.io:
+    container_name: peer1.formica.io
+    image: lekssays/proxdag:latest
+    environment:
+    - MY_NAME=peer1.formica.io
+    - MY_ID=1
+    - MY_PUB_KEY=mXyowyExG0MY3PjhWbpQCdDaM
+    - GOSHIMMER_API_ENDPOINT=http://172.17.0.1:8091
+    - GOSHIMMER_WEBSOCKETS_ENDPOINT=ws://172.17.0.1:8091/ws
+    - IPFS_API_ENDPOINT=http://172.17.0.1:5001
+    - FORMICA_ENDPOINT=http://172.17.0.1:8090/fromica
+    - TMP_FOLDER=/temp/
+    - DATA_FOLDER=/data/
+    - DISHONEST_PEERS=dishonest_peers
+    command: /bin/bash /client/hello.sh
+    working_dir: /client
+    volumes:
+    - ./../../protocol:/protocol
+    - ./client/:/client
+    - ./data/:/data
+    networks:
+    - outside
+
+  peer2.formica.io:
+    container_name: peer2.formica.io
+    image: lekssays/proxdag:latest
+    environment:
+    - MY_NAME=peer2.formica.io
+    - MY_ID=2
+    - MY_PUB_KEY=6DFhclvdFDAcziMxOmUncDyaz
+    - GOSHIMMER_API_ENDPOINT=http://172.17.0.1:8091
+    - GOSHIMMER_WEBSOCKETS_ENDPOINT=ws://172.17.0.1:8091/ws
+    - IPFS_API_ENDPOINT=http://172.17.0.1:5001
+    - FORMICA_ENDPOINT=http://172.17.0.1:8090/fromica
     - TMP_FOLDER=/temp/
     - DATA_FOLDER=/data/
     - DISHONEST_PEERS=dishonest_peers
