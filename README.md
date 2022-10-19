@@ -34,7 +34,8 @@ cp -R $HOME/formica/protocol/plugins/formica $HOME/goshimmer/plugins/formica
     "github.com/Lekssays/formica/protocol/plugins/formica"
     ``` to imports in `$HOME/goshimmer/plugins/research.go`
     - Add `formica.Plugin,"` after 	`chat.Plugin,` in `$HOME/goshimmer/plugins/research.go`
-    - Install formica plugin locally ```
+    - Install formica plugin locally 
+    ```
     go get github.com/Lekssays/formica/protocol/plugins/formica
     ```
 
