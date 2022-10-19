@@ -49,6 +49,7 @@ def peer_update(local_model, train_loader, epoch=5, attack_type=None):
             loss = F.nll_loss(output, target)
             loss.backward()
             optimizer.step()
+
     return loss.item(), local_model
 
 

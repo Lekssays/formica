@@ -33,7 +33,7 @@ def parse_args():
     parser.add_argument('-p', '--peers',
                         dest = "peers",
                         help = "peers",
-                        default = 100,
+                        default = 3,
                         required = False)
     parser.add_argument('-al', '--alpha',
                         dest = "alpha",
@@ -43,7 +43,7 @@ def parse_args():
     parser.add_argument('-at', '--attack_type',
                         dest = "attack_type",
                         help = "Attack type: lf , backdoor, untargeted, untargeted_sybil",
-                        default = "None",
+                        default = None,
                         required = False)
     parser.add_argument('-ap', '--attack_percentage',
                         dest = "attack_percentage",

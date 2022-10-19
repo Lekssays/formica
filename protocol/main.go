@@ -23,16 +23,16 @@ func main() {
 			fmt.Println("Running DAG")
 			g := graph.NewGraph("modelID1")
 			n1 := graph.Node{
-				MessageID: "A",
+				BlockID: "A",
 			}
 			n2 := graph.Node{
-				MessageID: "B",
+				BlockID: "B",
 			}
 			n3 := graph.Node{
-				MessageID: "C",
+				BlockID: "C",
 			}
 			n4 := graph.Node{
-				MessageID: "D",
+				BlockID: "D",
 			}
 			g.AddNode(n1)
 			g.AddNode(n2)
@@ -66,24 +66,24 @@ func main() {
 				Accuracy:  97.0212,
 			}
 
-			messageID, err := graph.SendModelUpdate(mupdate)
+			blockID, err := graph.SendModelUpdate(mupdate)
 			if err != nil {
 				fmt.Errorf(err.Error())
 			}
-			fmt.Printf("MessageID: %s\n", messageID)
+			fmt.Printf("BlockID: %s\n", blockID)
 
-			modelUpdate, _ := graph.GetModelUpdate(messageID)
+			modelUpdate, _ := graph.GetModelUpdate(blockID)
 			fmt.Println(modelUpdate.String())
 
-			graph.AddModelUpdateEdge(messageID, *g)
+			graph.AddModelUpdateEdge(blockID, *g)
 			fmt.Println(g)
 
-			err = graph.SaveModelUpdate(messageID, mupdate)
+			err = graph.SaveModelUpdate(blockID, mupdate)
 			if err != nil {
 				fmt.Errorf(err.Error())
 			}
 
-			rmupdate, err := graph.RetrieveModelUpdate(mupdate.ModelID, messageID)
+			rmupdate, err := graph.RetrieveModelUpdate(mupdate.ModelID, blockID)
 			if err != nil {
 				fmt.Errorf(err.Error())
 			}
@@ -126,13 +126,13 @@ func main() {
 				Decision: true,
 				Metadata: "{'start_timestamp:1555563296, 'end_timestamp':1655889633, 'electionID':'elec_85596dzz', 'signature':'955522sq3d89dsf4'}",
 			}
-			messageID, err := consensus.SendVote(vote)
+			blockID, err := consensus.SendVote(vote)
 			if err != nil {
 				fmt.Errorf(err.Error())
 			}
-			fmt.Printf("MessageID: %s\n", messageID)
+			fmt.Printf("BlockID: %s\n", blockID)
 
-			votePayload, _ := consensus.GetVote(messageID)
+			votePayload, _ := consensus.GetVote(blockID)
 			fmt.Println("Vote:", votePayload)
 
 			err = consensus.SaveVote(vote)

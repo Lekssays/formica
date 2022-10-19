@@ -61,16 +61,16 @@ func RunLiveFeed(wg *sync.WaitGroup) {
 			var response GHResponse
 			json.Unmarshal(message, &response)
 
-			// PayloadType for Formica is 787 (see plugins/formica/formica.go)
+			// PayloadType for formica is 787 (see plugins/formica/formica.go)
 			if strings.Contains(string(message), "\"payload_type\":787") {
-				messageID := response.Data.ID
-				log.Printf("MessageID: %s", messageID)
-				mupdate, err := GetModelUpdate(string(messageID))
+				blockID := response.Data.ID
+				log.Printf("BlockID: %s", blockID)
+				mupdate, err := GetModelUpdate(string(blockID))
 				if err != nil {
 					log.Println("Error GetModelUpdate-", err.Error())
 					continue
 				}
-				err = SaveModelUpdate(string(messageID), mupdate)
+				err = SaveModelUpdate(string(blockID), mupdate)
 				if err != nil {
 					log.Println("Error SaveModelUpdate-", err.Error())
 				}

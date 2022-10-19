@@ -31,11 +31,11 @@ type Model struct {
 }
 
 type Response struct {
-	MessageID string `json:"messageID,omitempty"`
-	Error     string `json:"error,omitempty"`
+	BlockID string `json:"blockID,omitempty"`
+	Error   string `json:"error,omitempty"`
 }
 
-type Message struct {
+type Block struct {
 	Purpose uint32 `json:"purpose"`
 	Data    []byte `json:"data"`
 }
@@ -50,11 +50,11 @@ type Peer struct {
 	Name   string `json:"name"`
 }
 
-func GetModelUpdate(messageID string) (mupb.ModelUpdate, error) {
+func GetModelUpdate(blockID string) (mupb.ModelUpdate, error) {
 	goshimAPI := client.NewGoShimmerAPI(GOSHIMMER_NODE)
-	messageRaw, _ := goshimAPI.GetMessage(messageID)
+	blockRaw, _ := goshimAPI.GetBlock(blockID)
 	payload := new(formica.Payload)
-	err := payload.FromBytes(messageRaw.Payload)
+	err := payload.FromBytes(blockRaw.Payload)
 	if err != nil {
 		return mupb.ModelUpdate{}, err
 	}
@@ -78,22 +78,22 @@ func GetModelUpdate(messageID string) (mupb.ModelUpdate, error) {
 
 }
 
-func AddModelUpdateEdge(messageID string, graph Graph) (bool, error) {
-	mupdate, err := GetModelUpdate(messageID)
+func AddModelUpdateEdge(blockID string, graph Graph) (bool, error) {
+	mupdate, err := GetModelUpdate(blockID)
 	if err != nil {
 		return false, err
 	}
 
-	graph.AddNode(Node{MessageID: messageID})
+	graph.AddNode(Node{BlockID: blockID})
 
 	for i := 0; i < len(mupdate.Parents); i++ {
-		graph.AddEdge(Node{MessageID: mupdate.Parents[i]}, Node{MessageID: messageID})
+		graph.AddEdge(Node{BlockID: mupdate.Parents[i]}, Node{BlockID: blockID})
 	}
 
 	return true, nil
 }
 
-func SaveModelUpdate(messageID string, modelUpdate mupb.ModelUpdate) error {
+func SaveModelUpdate(blockID string, modelUpdate mupb.ModelUpdate) error {
 	ctx := context.Background()
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     "0.0.0.0:6379",
@@ -106,13 +106,13 @@ func SaveModelUpdate(messageID string, modelUpdate mupb.ModelUpdate) error {
 		return err
 	}
 
-	err = rdb.Set(ctx, messageID, modelUpdateBytes, 0).Err()
+	err = rdb.Set(ctx, blockID, modelUpdateBytes, 0).Err()
 	if err != nil {
 		return err
 	}
 
 	key := fmt.Sprintf("%s!MU!", modelUpdate.ModelID)
-	err = rdb.SAdd(ctx, key, messageID).Err()
+	err = rdb.SAdd(ctx, key, blockID).Err()
 	if err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func SaveModelUpdate(messageID string, modelUpdate mupb.ModelUpdate) error {
 	return nil
 }
 
-func RetrieveModelUpdate(modelID string, messageID string) (*mupb.ModelUpdate, error) {
+func RetrieveModelUpdate(modelID string, blockID string) (*mupb.ModelUpdate, error) {
 	ctx := context.Background()
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     "0.0.0.0:6379",
@@ -133,7 +133,7 @@ func RetrieveModelUpdate(modelID string, messageID string) (*mupb.ModelUpdate, e
 		DB:       0,
 	})
 
-	data, err := rdb.Get(ctx, messageID).Result()
+	data, err := rdb.Get(ctx, blockID).Result()
 	if err != nil {
 		return &mupb.ModelUpdate{}, err
 	}
@@ -160,7 +160,7 @@ func SendModelUpdate(mupdate mupb.ModelUpdate) (string, error) {
 		return "", err
 	}
 
-	payload := Message{
+	payload := Block{
 		Purpose: MODEL_UPDATE_GOLANG_PURPOSE_ID,
 		Data:    modelUpdateBytes,
 	}
@@ -181,22 +181,22 @@ func SendModelUpdate(mupdate mupb.ModelUpdate) (string, error) {
 	defer resp.Body.Close()
 
 	body, _ := ioutil.ReadAll(resp.Body)
-	message := string(body)
+	block := string(body)
 
 	var response Response
 	json.Unmarshal(body, &response)
-	if strings.Contains(message, "messageID") {
-		err = SaveModelUpdate(response.MessageID, mupdate)
+	if strings.Contains(block, "blockID") {
+		err = SaveModelUpdate(response.BlockID, mupdate)
 		if err != nil {
 			return "", err
 		}
-		return response.MessageID, nil
+		return response.BlockID, nil
 	}
 
 	return "", errors.New(response.Error)
 }
 
-func GetModelUpdatesMessageIDs(modelID string) ([]string, error) {
+func GetModelUpdatesBlockIDs(modelID string) ([]string, error) {
 	ctx := context.Background()
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     "0.0.0.0:6379",
@@ -205,7 +205,7 @@ func GetModelUpdatesMessageIDs(modelID string) ([]string, error) {
 	})
 
 	key := fmt.Sprintf("%s!MU!", modelID)
-	messageIDs, err := rdb.SMembers(ctx, key).Result()
+	blockIDs, err := rdb.SMembers(ctx, key).Result()
 	if err != nil {
 		return []string{}, err
 	}
@@ -215,18 +215,18 @@ func GetModelUpdatesMessageIDs(modelID string) ([]string, error) {
 		return []string{}, err
 	}
 
-	return messageIDs, nil
+	return blockIDs, nil
 }
 
 func GetModelUpdates(modelID string) ([]*mupb.ModelUpdate, error) {
-	messageIDs, err := GetModelUpdatesMessageIDs(modelID)
+	blockIDs, err := GetModelUpdatesBlockIDs(modelID)
 	if err != nil {
 		return []*mupb.ModelUpdate{}, err
 	}
 
 	var modelUpdates []*mupb.ModelUpdate
-	for i := 0; i < len(messageIDs); i++ {
-		modelUpdate, err := RetrieveModelUpdate(modelID, messageIDs[i])
+	for i := 0; i < len(blockIDs); i++ {
+		modelUpdate, err := RetrieveModelUpdate(modelID, blockIDs[i])
 		if err != nil {
 			return []*mupb.ModelUpdate{}, err
 		}
@@ -297,7 +297,7 @@ func GetClients(modelID string) ([]string, error) {
 		}
 		return pubkeys, nil
 	} else if os.Getenv("ENVIRONMENT") == "PROD" {
-		messageIDs, err := GetModelUpdatesMessageIDs(modelID)
+		blockIDs, err := GetModelUpdatesBlockIDs(modelID)
 
 		if err != nil {
 			return []string{}, err
@@ -305,8 +305,8 @@ func GetClients(modelID string) ([]string, error) {
 
 		set := make(map[string]bool)
 		var clients []string
-		for i := 0; i < len(messageIDs); i++ {
-			modelUpdate, err := RetrieveModelUpdate(modelID, messageIDs[i])
+		for i := 0; i < len(blockIDs); i++ {
+			modelUpdate, err := RetrieveModelUpdate(modelID, blockIDs[i])
 			if err != nil {
 				return []string{}, err
 			}

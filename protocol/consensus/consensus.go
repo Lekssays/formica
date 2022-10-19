@@ -254,7 +254,7 @@ func StoreScoreOnTangle(score scpb.Score) (string, error) {
 		return "", err
 	}
 
-	payload := Message{
+	payload := Block{
 		Purpose: score.Type,
 		Data:    scoreBytes,
 	}
@@ -275,11 +275,11 @@ func StoreScoreOnTangle(score scpb.Score) (string, error) {
 	defer resp.Body.Close()
 
 	body, _ := ioutil.ReadAll(resp.Body)
-	message := string(body)
+	block := string(body)
 	var response graph.Response
 	json.Unmarshal(body, &response)
-	if strings.Contains(message, "messageID") {
-		return response.MessageID, nil
+	if strings.Contains(block, "blockID") {
+		return response.BlockID, nil
 	}
 
 	return "", errors.New(response.Error)
@@ -295,11 +295,11 @@ func isScore(purpose uint32) bool {
 	return false
 }
 
-func GetScoreByMessageID(messageID string) (scpb.Score, error) {
+func GetScoreByBlockID(blockID string) (scpb.Score, error) {
 	goshimAPI := client.NewGoShimmerAPI(GOSHIMMER_NODE)
-	messageRaw, _ := goshimAPI.GetMessage(messageID)
+	blockRaw, _ := goshimAPI.GetBlock(blockID)
 	payload := new(formica.Payload)
-	err := payload.FromBytes(messageRaw.Payload)
+	err := payload.FromBytes(blockRaw.Payload)
 	if err != nil {
 		return scpb.Score{}, err
 	}
