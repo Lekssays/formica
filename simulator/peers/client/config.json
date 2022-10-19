@@ -1,0 +1,1 @@
+{"dataset": "MNIST", "num_peers": 100, "iterations": 1, "epochs": 5, "batch_size": 50, "alpha": "100", "attack_type": "lf", "dc": "false", "attack_percentage": 0}

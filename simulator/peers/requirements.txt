@@ -1,0 +1,11 @@
+argparse
+torch
+torchvision
+pandas
+sklearn
+numpy
+requests
+protobuf
+websockets
+asyncio
+redis

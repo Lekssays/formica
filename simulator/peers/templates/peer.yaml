@@ -1,0 +1,22 @@
+  peer_name:
+    container_name: peer_name
+    image: lekssays/proxdag:latest
+    environment:
+    - MY_NAME=peer_name
+    - MY_ID=peer_id
+    - MY_PUB_KEY=my_pub_key
+    - GOSHIMMER_API_ENDPOINT=http://172.17.0.1:8091
+    - GOSHIMMER_WEBSOCKETS_ENDPOINT=ws://172.17.0.1:8091/ws
+    - IPFS_API_ENDPOINT=http://ipfs.proxdag.io:5001
+    - PROXDAG_ENDPOINT=http://172.17.0.1:8090/proxdag
+    - TMP_FOLDER=/temp/
+    - DATA_FOLDER=/data/
+    - DISHONEST_PEERS=dishonest_peers
+    command: /bin/bash /client/hello.sh
+    working_dir: /client
+    volumes:
+    - ./../../protocol:/protocol
+    - ./client/:/client
+    - ./data/:/data
+    networks:
+    - outside

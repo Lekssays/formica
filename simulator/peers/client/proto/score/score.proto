@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package score;
+
+option go_package = "github.com/Lekssays/ProxDAG/network/simulator/peers/client/proto/score";
+
+message Score {
+    string type = 1;
+    string path = 2;
+}

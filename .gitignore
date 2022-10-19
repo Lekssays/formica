@@ -1,0 +1,8 @@
+simulator/peers/data/*
+protocol/protocol
+protocol/committee/committee
+protocol/consensus/consensus
+*.pickle
+*.pyc
+*.gz
+
