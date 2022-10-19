@@ -12,7 +12,7 @@ services:
     environment:
     - MY_NAME=peer0.formica.io
     - MY_ID=0
-    - MY_PUB_KEY=URW7O6Z0zEOEcbEPfNagZMWwo
+    - MY_PUB_KEY=kZVnsFUheozHAgsrC1XZQNYjg
     - GOSHIMMER_API_ENDPOINT=http://172.17.0.1:8091
     - GOSHIMMER_WEBSOCKETS_ENDPOINT=ws://172.17.0.1:8091/ws
     - IPFS_API_ENDPOINT=http://172.17.0.1:5001
@@ -23,7 +23,7 @@ services:
     command: /bin/bash /client/hello.sh
     working_dir: /client
     volumes:
-    - ./../../protocol:/protocol
+    - ./../protocol:/protocol
     - ./client/:/client
     - ./data/:/data
     networks:
@@ -35,7 +35,7 @@ services:
     environment:
     - MY_NAME=peer1.formica.io
     - MY_ID=1
-    - MY_PUB_KEY=sIcELtGAwtZH9rTAUjdaMJGo9
+    - MY_PUB_KEY=SJo58HpXJEQxQ7tpYruAoFC21
     - GOSHIMMER_API_ENDPOINT=http://172.17.0.1:8091
     - GOSHIMMER_WEBSOCKETS_ENDPOINT=ws://172.17.0.1:8091/ws
     - IPFS_API_ENDPOINT=http://172.17.0.1:5001
@@ -46,7 +46,7 @@ services:
     command: /bin/bash /client/hello.sh
     working_dir: /client
     volumes:
-    - ./../../protocol:/protocol
+    - ./../protocol:/protocol
     - ./client/:/client
     - ./data/:/data
     networks:
@@ -58,7 +58,7 @@ services:
     environment:
     - MY_NAME=peer2.formica.io
     - MY_ID=2
-    - MY_PUB_KEY=uisuhBI7KAbX3yf0gKH4xIarT
+    - MY_PUB_KEY=Fais2nP4mqkKjppXibDpFYDfY
     - GOSHIMMER_API_ENDPOINT=http://172.17.0.1:8091
     - GOSHIMMER_WEBSOCKETS_ENDPOINT=ws://172.17.0.1:8091/ws
     - IPFS_API_ENDPOINT=http://172.17.0.1:5001
@@ -69,7 +69,7 @@ services:
     command: /bin/bash /client/hello.sh
     working_dir: /client
     volumes:
-    - ./../../protocol:/protocol
+    - ./../protocol:/protocol
     - ./client/:/client
     - ./data/:/data
     networks:

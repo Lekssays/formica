@@ -1,4 +1,4 @@
-simulator/peers/data/*
+simulator/data/*
 protocol/protocol
 protocol/committee/committee
 protocol/consensus/consensus
@@ -7,9 +7,9 @@ protocol/consensus/consensus
 *.gz
 *.csv
 *.log
-simulator/peers/client/__pycache__
+simulator/client/__pycache__
 simulator/ipfs/*
 .env
 protocol/consensus/peers.json
-simulator/peers/peers.json
-simulator/peers/client/peers.json
+simulator/peers.json
+simulator/client/peers.json

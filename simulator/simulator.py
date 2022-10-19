@@ -166,7 +166,7 @@ def generate_peers(num_peers: int):
 
 def copy_peers():
     print("Copying peers to protocol")
-    command = "cp peers.json ./../../protocol/consensus/"
+    command = "cp peers.json ./../protocol/consensus/"
     subprocess.call(command, shell=True)
     command = "cp peers.json ./client/"
     subprocess.call(command, shell=True)

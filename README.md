@@ -22,7 +22,7 @@ git clone https://github.com/iotaledger/goshimmer.git
 git clone https://github.com/lekssays/formica.git
 ```
 
-## Run formica
+## Install formica
 - Copy formica plugin into Goshimmer folder:
 
 ```
@@ -30,9 +30,7 @@ cp -R $HOME/formica/protocol/plugins/formica $HOME/goshimmer/plugins/formica
 ```
 
 - Integrate formica plugin in Goshimmer:
-    - Add ```
-    "github.com/Lekssays/formica/protocol/plugins/formica"
-    ``` to imports in `$HOME/goshimmer/plugins/research.go`
+    - Add `"github.com/Lekssays/formica/protocol/plugins/formica"` to imports in `$HOME/goshimmer/plugins/research.go`
     - Add `formica.Plugin,"` after 	`chat.Plugin,` in `$HOME/goshimmer/plugins/research.go`
     - Install formica plugin locally 
     ```
@@ -60,10 +58,10 @@ docker run -d --name ipfs.formica.io --network="formica" -v $HOME/formica/simula
 - Install Python Dependecies: 
 
 ```
-cd $HOME/formica/simulator/peers/ && pip3 install -r requirements.txt
+cd $HOME/formica/simulator/ && pip3 install -r requirements.txt
 ```
 
-- Download and Unzip `data.zip` in `$HOME/formica/simulator/peers`
+- Download and Unzip `data.zip` in `$HOME/formica/simulator/`
 
 - Edit Environment Variables in `$HOME/formica/env.example`
 
@@ -85,4 +83,12 @@ cd $HOME/formica/protocol/ && go mod tidy && go build
 
 ```
 cd $HOME/formica/protocol/ && ./protocol listener
+```
+
+## Run formica
+
+- To test if formica works, run:
+
+```
+cd $HOME/formica/simulator/ && python3 simulator.py -d MNIST
 ```
