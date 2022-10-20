@@ -25,6 +25,11 @@ def parse_args():
                         help = "Dataset: MNIST, CIFAR, KDD",
                         default = "MNIST",
                         required = False)
+    parser.add_argument('-m', '--model',
+                        dest = "model",
+                        help = "Model: TransE",
+                        default = "TransE",
+                        required = False)
     parser.add_argument('-i', '--iterations',
                         dest = "iterations",
                         help = "Number of Iterations",
@@ -62,7 +67,7 @@ def load_peers():
     peers = []
     with open('peers.json', "r") as f:
         file = json.load(f)
-    
+
     for peer in file['peers']:
         peers.append(peer['name'])
 
@@ -87,15 +92,15 @@ def start_containers(peers, peers_len=100):
     subprocess.call(command, shell=True)
 
 
-def start_learning(dataset, peers, dc, iterations, attack_percentage=0, peers_len=100, alpha="0.05", attack_type=None):
+def start_learning(model_name, dataset, peers, dc, iterations, attack_percentage=0, peers_len=100, alpha="0.05", attack_type=None):
     if peers_len > len(peers):
         peers_len = len(peers)
 
     for peer in peers[:peers_len]:
         if attack_type is None:
-            command = "docker exec -it {} python3 /client/main.py -d {} -al {} -ap {} -dc {} -i {}".format(peer, dataset, alpha, str(attack_percentage), dc, str(iterations))   
+            command = "docker exec -it {} python3 /client/main.py -m {} -d {} -al {} -ap {} -dc {} -i {}".format(peer, model_name, dataset, alpha, str(attack_percentage), dc, str(iterations))
         else:
-            command = "docker exec -it {} python3 /client/main.py -d {} -al {} -at {} -ap {} -dc {} -i {}".format(peer, dataset, alpha, attack_type, str(attack_percentage), dc, str(iterations))
+            command = "docker exec -it {} python3 /client/main.py -m {} -d {} -al {} -at {} -ap {} -dc {} -i {}".format(peer, model_name, dataset, alpha, attack_type, str(attack_percentage), dc, str(iterations))
         print("Learning ", peer)
         subprocess.call(command, shell=True)
 
@@ -152,7 +157,7 @@ def generate_peers(num_peers: int):
             'name': "peer" + str(p) + ".formica.io",
         }
         peers.append(tmp)
-    
+
     f = open("peers.json", "w")
 
     peers_json = {
@@ -205,6 +210,7 @@ def main():
     alpha = parse_args().alpha
     peers_len = int(parse_args().peers)
     dataset = parse_args().dataset
+    model_name = parse_args().model
     iterations = int(parse_args().iterations)
     attack_type = str(parse_args().attack_type)
     attack_percentage = int(parse_args().attack_percentage)
@@ -216,12 +222,12 @@ def main():
 
     print("Generating docker-compose.yaml")
     peers = generate_peers(num_peers=peers_len)
-    
+
     dishonest_peers = []
     if len(attack_type) > 0:
         dishonest_peers = generate_dishonest_peers(peers_len, attack_percentage)
         print("Dishonest Peers", "-".join(dishonest_peers))
-        loop.run_until_complete(send_log("Dishonest Peers " + str(dishonest_peers)))    
+        loop.run_until_complete(send_log("Dishonest Peers " + str(dishonest_peers)))
 
     configs = generate_peers_configs(peers=peers, num_peers=peers_len, dishonest_peers=dishonest_peers)
     generate_docker_compose(configs=configs)
@@ -234,9 +240,9 @@ def main():
         return
 
     metric_filename = "{}_{}_{}_{}_{}_{}.csv".format(dataset, str(alpha), str(iterations), dc, attack_type, str(attack_percentage))
-    settings = "dataset = {}, peers = {}, alpha = {}, iterations = {}, dync_committee = {}, attack_type = {}, attack_percentage = {}, dishonest_peers = {}\n".format(dataset, str(peers_len), str(alpha), str(iterations), dc, attack_type, str(attack_percentage), '-'.join(dishonest_peers))
-    loop.run_until_complete(send_log(settings, metric_filename))    
-    
+    settings = "model = {}, dataset = {}, peers = {}, alpha = {}, iterations = {}, dync_committee = {}, attack_type = {}, attack_percentage = {}, dishonest_peers = {}\n".format(model_name, dataset, str(peers_len), str(alpha), str(iterations), dc, attack_type, str(attack_percentage), '-'.join(dishonest_peers))
+    loop.run_until_complete(send_log(settings, metric_filename))
+
     start_containers(peers=peers, peers_len=peers_len)
     time.sleep(10)
     initialize_protocol(dataset=dataset)
@@ -248,10 +254,11 @@ def main():
         if attack_type != "None":
             start_learning(
                 peers=peers,
+                model_name=model_name,
                 dataset=dataset,
                 peers_len=peers_len,
                 alpha=alpha,
-                attack_type=attack_type, 
+                attack_type=attack_type,
                 attack_percentage=attack_percentage,
                 dc=dc,
                 iterations=iterations
@@ -265,7 +272,7 @@ def main():
                 dc=dc,
                 iterations=iterations
             )
-        
+
         if dc == "true":
             print("\nGenerating Scores for Iteration #{}".format(str(i)))
             run_consensus()

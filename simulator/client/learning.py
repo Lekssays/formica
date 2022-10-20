@@ -14,7 +14,7 @@ import torch.optim as optim
 from os.path import exists
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, TensorDataset
-from models import SFMNet
+
 
 torch.backends.cudnn.benchmark=True
 torch.manual_seed(42)
@@ -76,12 +76,12 @@ def test(local_model, test_loader, attack):
         for data, target in test_loader:
             data, target = data, target
             output = local_model(data)
-            
+
             # sum up batch loss
-            test_loss += F.nll_loss(output, target, reduction='sum').item() 
-            
+            test_loss += F.nll_loss(output, target, reduction='sum').item()
+
             # get the index of the max log-probability
-            pred = output.argmax(dim=1, keepdim=True)  
+            pred = output.argmax(dim=1, keepdim=True)
             correct += pred.eq(target.view_as(pred)).sum().item()
 
             if dataset == "MNIST":
@@ -106,9 +106,9 @@ def load_data():
                         transforms.ToTensor(),
                         transforms.Normalize((0.1307,), (0.3081,))
                     ])
-        
+
         testdata = datasets.MNIST(os.getenv("DATA_FOLDER") + 'test/', train=False, transform=transform, download=True)
-        
+
         # Loading the test data and thus converting them into a test_loader
         test_loader = torch.utils.data.DataLoader(testdata, batch_size=batch_size, shuffle=True)
 
@@ -117,9 +117,11 @@ def load_data():
 
 def initialize(modelID):
     dataset = utils.get_parameter(param="dataset")
+    model_name = utils.get_parameter(param="model")
 
-    if dataset == "MNIST":
-        local_model =  models.SFMNet(784, 10)
+    local_model =  models.load_model(model_name)
+    # if model_name == "TransE":
+
 
     torch.save(local_model.state_dict(), os.getenv("TMP_FOLDER") + modelID + ".pt")
 
@@ -153,7 +155,7 @@ def evaluate(local_model, loss, attack=0):
     message = 'attack success rate %0.3g' %(asr)
     print(message)
     loop.run_until_complete(utils.send_log(message))
-    
+
     metric_filename = "{}_{}_{}_{}_{}_{}.csv".format(dataset, str(alpha), str(iterations), dc, attack_type, str(attack_percentage))
     log_message = os.getenv("MY_NAME") + "," + str(loss / num_peers) + "," + str(test_loss) + "," + str(acc) + "," + str(asr) + "!" + metric_filename
     loop.run_until_complete(utils.send_log(log_message))
@@ -180,7 +182,7 @@ def train(local_model, alpha="100", attack_type="lf"):
     num_peers = utils.get_parameter(param="num_peers")
     epochs = utils.get_parameter(param="epochs")
     batch_size = utils.get_parameter(param="batch_size")
-    
+
     attack = 0
     loss = 0
     my_id = int(os.getenv("MY_ID"))
@@ -233,10 +235,10 @@ def load_local_model():
 def learn(modelID):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    
+
     print(os.getenv("MY_NAME"), "Learning")
     loop.run_until_complete(utils.send_log("Learning"))
-    
+
     weights_ids, indices, parents = utils.get_weights_to_train(modelID=modelID)
 
     peers_weights = []
@@ -271,8 +273,8 @@ def learn(modelID):
         if attacker == False:
             print(os.getenv("MY_NAME"), "Evaluating")
             loop.run_until_complete(utils.send_log("Evaluating"))
-            acc, asr = evaluate(local_model=local_model, loss=loss, attack=attack)    
-        
+            acc, asr = evaluate(local_model=local_model, loss=loss, attack=attack)
+
         if acc >= utils.get_my_latest_accuracy() or attacker:
             print(os.getenv("MY_NAME"), "Publishing")
             loop.run_until_complete(utils.send_log("Publishing"))

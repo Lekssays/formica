@@ -181,16 +181,33 @@ func main() {
 			modelID := "9313eb37-9fbd-47dc-bcbd-76c9cbf4cce4"
 
 			dataset := args[1]
-			features := 10
-			classes := 10
-			if dataset == "MNIST" {
-				features = 784
-				classes = 10
+			model_name := args[2]
+
+			n_entities := -1
+			n_relations := -1
+			n_dimensions := -1
+
+			is_valid := true
+			if dataset == "FB15k237-Fed3" {
+				n_entities = 14541
+				n_relations = 237
+			} else {
+				fmt.Printf("Dataset %s is unsupported", dataset)
+				is_valid = false
 			}
 
-			err := consensus.Initialize(modelID, classes, features)
-			if err != nil {
-				fmt.Errorf(err.Error())
+			if model_name == "DistMult" {
+				n_dimensions = 50 // should replace this with those in FedE
+			} else {
+				fmt.Printf("Model %s is unsupported", model_name)
+				is_valid = false
+			}
+
+			if is_valid {
+				err := consensus.Initialize(modelID, n_entities, n_relations, n_dimensions)
+				if err != nil {
+					fmt.Errorf(err.Error())
+				}
 			}
 		} else {
 			fmt.Errorf("Invalid Operation!")
