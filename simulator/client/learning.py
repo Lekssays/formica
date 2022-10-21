@@ -119,9 +119,11 @@ def initialize(modelID):
     # dataset = utils.get_parameter(param="dataset")
     model_name = utils.get_parameter(param="model")
 
-    local_model =  models.load_model(model_name)
+    local_model =  models.load_model(model_id, model_name)
 
-    torch.save(local_model.state_dict(), os.getenv("TMP_FOLDER") + modelID + ".pt")
+    local_model.save_model(os.getenv("TMP_FOLDER"))
+
+    torch.save(local_model.get_state_dict(), os.getenv("TMP_FOLDER") + modelID + ".pt")
 
     return local_model
 

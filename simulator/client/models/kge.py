@@ -1,10 +1,11 @@
 import torch
 import torch.nn as nn
-
+import os
 
 class KGEModel(nn.Module):
-    def __init__(self, args, model_name):
+    def __init__(self, model_id, model_name, args):
         super(KGEModel, self).__init__()
+        self.model_id = model_id
         self.model_name = model_name
         self.num_entities = args["num_entities"]
         self.num_relations = args["num_relations"]
@@ -38,6 +39,30 @@ class KGEModel(nn.Module):
             a=-self.embedding_range.item(),
             b=self.embedding_range.item()
         )
+
+    def get_state_dict(self):
+        state = {
+            'entity_embedding': self.entity_embedding,
+            'relation_embedding': self.relation_embedding
+        }
+
+        return state
+
+    def set_state_dict(self, state_dict):
+        self.entity_embedding = state_dict["entity_embedding"]
+        self.relation_embedding = state_dict["relation_embedding"]
+
+    def save_model(self, state_dir):
+        state_dict = self.get_state_dict()
+
+        state_path = os.path.join(state_dir, "{}.pt".format(self.model_id))
+
+        torch.save(state_dict, state_path)
+
+    def load_model(self, state_dir):
+        state_path = os.path.join(state_dir, "{}.pt".format(self.model_id))
+        state_dict = torch.load(state_path, map_location=self.device)
+        self.set_state_dict(state_dict)
 
     def forward(self, sample, neg=True):
         if not neg:

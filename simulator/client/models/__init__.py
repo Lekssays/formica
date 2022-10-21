@@ -2,7 +2,7 @@ from .sfmnet import SFMNet
 from .kge import KGEModel
 import utils
 
-def load_model(model_name):
+def load_model(model_id, model_name):
     config = utils.get_config()
 
     if model_name == "MNIST":
@@ -27,6 +27,6 @@ def load_model(model_name):
             "num_entities": num_entities,
             "num_relations": num_relations
         }
-        return KGEModel(args, "TransE")
+        return KGEModel(model_id, "TransE", args)
 
     raise Exception("{} is unsupported".format(model_name))
