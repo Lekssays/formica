@@ -80,7 +80,6 @@ def parse_args():
 
 
 def generate_config():
-
     dataset = parse_args().dataset
     num_peers = int(parse_args().num_peers)
     epochs = int(parse_args().epochs)
@@ -90,6 +89,8 @@ def generate_config():
     iterations = int(parse_args().iterations)
     dc = parse_args().dc
     attack_percentage = int(parse_args().attack_percentage)
+
+    metadata = utils.get_dataset_metadata(dataset)
 
     config = {
         'dataset': dataset,
@@ -101,6 +102,7 @@ def generate_config():
         'attack_type': attack_type,
         'dc': dc,
         'attack_percentage': attack_percentage,
+        'metadata': metadata
     }
 
     f = open('config.json', 'w')

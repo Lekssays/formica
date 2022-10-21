@@ -116,12 +116,10 @@ def load_data():
 
 
 def initialize(modelID):
-    dataset = utils.get_parameter(param="dataset")
+    # dataset = utils.get_parameter(param="dataset")
     model_name = utils.get_parameter(param="model")
 
     local_model =  models.load_model(model_name)
-    # if model_name == "TransE":
-
 
     torch.save(local_model.state_dict(), os.getenv("TMP_FOLDER") + modelID + ".pt")
 

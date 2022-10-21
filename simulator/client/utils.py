@@ -7,10 +7,10 @@ import requests
 import json
 import os
 import time
-import random 
+import random
 import websockets
 import redis
-
+import json
 import numpy as np
 
 from collections import OrderedDict
@@ -79,7 +79,7 @@ def send_model_update(model_update: modelUpdate_pb2.ModelUpdate):
     }
     res = requests.post(FORMICA_ENDPOINT, json=payload)
     if "error" not in res.json():
-        return res.json()['blockID']  
+        return res.json()['blockID']
     return None
 
 
@@ -140,7 +140,7 @@ def get_trust():
 def get_purpose(payload: str):
     payload = base64.b64decode(payload)
     purpose = str(payload[3:5])
-    return int("0x" + purpose[4:6] + purpose[8:10], 16)    
+    return int("0x" + purpose[4:6] + purpose[8:10], 16)
 
 
 def parse_payload(blockID: str):
@@ -212,7 +212,7 @@ def get_weights_to_train(modelID: str):
             'timestamp': mu.timestamp,
         }
         metrics.append(tmp)
-    
+
     metrics = sorted(metrics, key=lambda x: (x['timestamp']), reverse=True)
 
     limit = min(LIMIT_SELECTED, len(metrics))
@@ -241,18 +241,37 @@ def get_weights_to_train(modelID: str):
 def get_client_id(pubkey: str):
     with open('peers.json', "r") as f:
         peers = json.load(f)
-    
+
     for peer in peers['peers']:
         if peer["pubkey"] == pubkey:
             return int(peer["id"])
 
     return None
 
-
 def get_parameter(param: str):
     with open("config.json", "r") as f:
         config = json.load(f)
     return config[param]
+
+def get_config():
+    with open("config.json", "r") as f:
+        config = json.load(f)
+    return config
+
+def get_parameter_with_default(param: str, default:object):
+    with open("config.json", "r") as f:
+        config = json.load(f)
+    return config.get(param, default)
+
+def get_dataset_metadata(dataset):
+    data_dir_path = os.getenv("DATA_FOLDER")
+
+    metadata_path = os.path.join(data_dir_path, dataset, "info.json")
+
+    with open(metadata_path, "r") as f:
+        metadata = json.load(f)
+
+    return metadata
 
 
 def publish_model_update(modelID, accuracy, parents, model, weights):
