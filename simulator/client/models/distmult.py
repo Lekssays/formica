@@ -5,8 +5,10 @@ import torch.nn as nn
 class DistMult(nn.Module):
     def __init__(self, args):
         super().__init__()
-
         self.model_name = "DistMult"
+        self.entity_embedding = None
+        self.relation_embedding = None
+
 
     def forward(self, sample, relation_embedding, entity_embedding, neg=True):
         if not neg:

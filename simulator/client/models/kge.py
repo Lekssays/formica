@@ -6,28 +6,55 @@ class KGEModel(nn.Module):
     def __init__(self, args, model_name):
         super(KGEModel, self).__init__()
         self.model_name = model_name
-        self.embedding_range = torch.Tensor([(args.gamma + args.epsilon) / args.hidden_dim])
+        self.num_entities = args["num_entities"]
+        self.num_relations = args["num_relations"]
+        self.device = torch.device(args["device"])
+
         self.gamma = nn.Parameter(
-            torch.Tensor([args.gamma]),
+            torch.Tensor([args["gamma"]]),
             requires_grad=False
         )
 
-    def forward(self, sample, relation_embedding, entity_embedding, neg=True):
+        self.embedding_range = torch.Tensor([(args["gamma"] + args["epsilon"]) / args["hidden_dim"]])
+
+        if model_name in ['RotatE', 'ComplEx']:
+            self.entity_embedding = torch.zeros(self.num_entities, args["hidden_dim"]*2).to(self.device).requires_grad_()
+        else:
+            self.entity_embedding = torch.zeros(self.num_entities, args["hidden_dim"]).to(self.device).requires_grad_()
+
+        nn.init.uniform_(
+            tensor=self.entity_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+        if model_name in ['ComplEx']:
+            self.relation_embedding = torch.zeros(self.num_relations, args["hidden_dim"] * 2).to(self.device).requires_grad_()
+        else:
+            self.relation_embedding = torch.zeros(self.num_relations, args["hidden_dim"]).to(self.device).requires_grad_()
+
+        nn.init.uniform_(
+            tensor=self.self.relation_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+    def forward(self, sample, neg=True):
         if not neg:
             head = torch.index_select(
-                entity_embedding,
+                self.entity_embedding,
                 dim=0,
                 index=sample[:, 0]
             ).unsqueeze(1)
 
             relation = torch.index_select(
-                relation_embedding,
+                self.relation_embedding,
                 dim=0,
                 index=sample[:, 1]
             ).unsqueeze(1)
 
             tail = torch.index_select(
-                entity_embedding,
+                self.entity_embedding,
                 dim=0,
                 index=sample[:, 2]
             ).unsqueeze(1)
@@ -36,23 +63,23 @@ class KGEModel(nn.Module):
             batch_size = head_part.shape[0]
 
             head = torch.index_select(
-                entity_embedding,
+                self.entity_embedding,
                 dim=0,
                 index=head_part[:, 0]
             ).unsqueeze(1)
 
             relation = torch.index_select(
-                relation_embedding,
+                self.relation_embedding,
                 dim=0,
                 index=head_part[:, 1]
             ).unsqueeze(1)
 
             if tail_part == None:
-                tail = entity_embedding.unsqueeze(0)
+                tail = self.entity_embedding.unsqueeze(0)
             else:
                 negative_sample_size = tail_part.size(1)
                 tail = torch.index_select(
-                    entity_embedding,
+                    self.entity_embedding,
                     dim=0,
                     index=tail_part.view(-1)
                 ).view(batch_size, negative_sample_size, -1)
