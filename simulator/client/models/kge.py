@@ -64,6 +64,7 @@ class KGEModel(nn.Module):
         state_dict = torch.load(state_path, map_location=self.device)
         self.set_state_dict(state_dict)
 
+
     def forward(self, sample, neg=True):
         if not neg:
             head = torch.index_select(

@@ -2,6 +2,7 @@ import asyncio
 import pickle
 import os
 import models
+from simulator.client.models.aggregators import FedEAggregator
 import utils
 import random
 
@@ -59,7 +60,7 @@ def aggregate(peers_indices, peers_weights=[]):
     phi = utils.get_phi()
     if phi is None:
         return
-    global_dict = peers_weights[-1].state_dict()
+    global_dict = peers_weights[-1].get_state_dict()
     for k in global_dict.keys():
         global_dict[k] = torch.stack([peers_weights[idx].state_dict()[k].float()* phi[peers_indices[idx]] for idx in range(0, len(peers_indices))], 0).mean(0)
     peers_weights[-1].load_state_dict(global_dict)
@@ -115,15 +116,15 @@ def load_data():
     return test_loader, train_x, train_y
 
 
-def initialize(modelID):
+def initialize(model_id):
     # dataset = utils.get_parameter(param="dataset")
     model_name = utils.get_parameter(param="model")
 
-    local_model =  models.load_model(model_id, model_name)
+    local_model =  models.load_model(model_name, model_id)
 
     local_model.save_model(os.getenv("TMP_FOLDER"))
 
-    torch.save(local_model.get_state_dict(), os.getenv("TMP_FOLDER") + modelID + ".pt")
+    # torch.save(local_model.get_state_dict(), os.getenv("TMP_FOLDER") + modelID + ".pt")
 
     return local_model
 
@@ -204,13 +205,17 @@ def train(local_model, alpha="100", attack_type="lf"):
 
 
 def load_weights_into_model(weights):
-    dataset = utils.get_parameter(param="dataset")
-    if dataset == "MNIST":
-        local_model =  models.SFMNet(784, 10)
-        state_dict = local_model.state_dict()
-        state_dict['fc.weight'] = weights['fc.weight']
-        state_dict['fc.bias'] = weights['fc.bias']
-        local_model.load_state_dict(state_dict)
+    model_name = utils.get_parameter(param="model")
+
+    local_model = models.load_model(model_name)
+    local_model.set_state_dict(weights)
+
+    # if dataset == "MNIST":
+    #     local_model =  models.SFMNet(784, 10)
+    #     state_dict = local_model.state_dict()
+    #     state_dict['fc.weight'] = weights['fc.weight']
+    #     state_dict['fc.bias'] = weights['fc.bias']
+    #     local_model.load_state_dict(state_dict)
 
     return local_model
 
@@ -232,31 +237,41 @@ def load_local_model():
     return model
 
 
-def learn(modelID):
+def learn(model_id):
+    model_name = utils.get_parameter(param="model")
+
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
     print(os.getenv("MY_NAME"), "Learning")
     loop.run_until_complete(utils.send_log("Learning"))
 
-    weights_ids, indices, parents = utils.get_weights_to_train(modelID=modelID)
+    weights, indices, parents = utils.get_weights_to_train(model_id=model_id)
 
-    peers_weights = []
-    for wid in weights_ids:
-        m = load_weights_into_model(wid)
-        peers_weights.append(m)
+    # load local model
+    local_model = models.load_model(model_name)
 
-    if exists(os.getenv("TMP_FOLDER") + modelID + ".pt") and len(weights_ids) > 0:
-        w = torch.load(os.getenv("TMP_FOLDER") + modelID + ".pt")
+    # aggregate local model with weights
+    updated_local_model = FedEAggregator()(local_model, weights)
+    # local_model.aggregate(weights)
+
+    peers_models = []
+    for w in weights:
         m = load_weights_into_model(w)
-        peers_weights.append(m)
+        peers_models.append(m)
 
-    local_model = aggregate(peers_weights=peers_weights, peers_indices=indices)
+    model_state_path = utils.get_model_state_path(model_id)
+    if exists(model_state_path) and len(weights) > 0:
+        w = torch.load(model_state_path)
+        m = load_weights_into_model(w)
+        peers_models.append(m)
 
-    message = "Weights to Train From = " + str(len(weights_ids))
+    local_model = aggregate(peers_weights=peers_models, peers_indices=indices)
+
+    message = "Weights to Train From = " + str(len(weights))
     print(message)
     loop.run_until_complete(utils.send_log(message))
-    if len(weights_ids) > 0:
+    if len(weights) > 0:
         print(os.getenv("MY_NAME"), "Training")
         loss, attack, local_model = train(
             local_model=local_model,
@@ -278,9 +293,9 @@ def learn(modelID):
         if acc >= utils.get_my_latest_accuracy() or attacker:
             print(os.getenv("MY_NAME"), "Publishing")
             loop.run_until_complete(utils.send_log("Publishing"))
-            torch.save(local_model.state_dict(), os.getenv("TMP_FOLDER") + modelID + ".pt")
+            torch.save(local_model.state_dict(), os.getenv("TMP_FOLDER") + model_id + ".pt")
             blockID = utils.publish_model_update(
-                modelID=modelID,
+                modelID=model_id,
                 weights=local_model.state_dict()['fc.weight'].cpu().numpy(),
                 accuracy=acc,
                 parents=parents,

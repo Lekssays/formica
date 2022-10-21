@@ -115,20 +115,22 @@ def generate_config():
 def main():
     generate_config()
 
-    modelID = "9313eb37-9fbd-47dc-bcbd-76c9cbf4cce4"
-    if not exists(os.getenv("TMP_FOLDER") + modelID + ".dat"):
-        local_model = learning.initialize(modelID)
-        blockID = utils.publish_model_update(
-            modelID=modelID,
+    model_id = "9313eb37-9fbd-47dc-bcbd-76c9cbf4cce4"
+    if not exists(os.getenv("TMP_FOLDER") + model_id + ".dat"):
+        local_model = learning.initialize(model_id)
+        local_state_dict = local_model.get_state_dict()
+
+        block_id = utils.publish_model_update(
+            modelID=model_id,
             parents=[],
-            weights=local_model.state_dict()['fc.weight'].cpu().numpy(),
-            model=local_model.state_dict(),
+            weights=local_state_dict['entity_embedding'].cpu().numpy(),
+            model=local_state_dict,
             accuracy=0.0,
         )
         utils.store_my_latest_accuracy(accuracy=0.00)
-        utils.store_weight_id(modelID=modelID, blockID=blockID)
+        utils.store_weight_id(modelID=model_id, blockID=block_id)
 
-    learning.learn(modelID=modelID)
+    learning.learn(model_id=model_id)
 
 
 if __name__ == "__main__":

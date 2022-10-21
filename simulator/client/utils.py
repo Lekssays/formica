@@ -196,13 +196,13 @@ def store_weight_id(modelID, blockID):
     f.close()
 
 
-def get_weights_to_train(modelID: str):
+def get_weights_to_train(model_id: str):
     weights = []
     indices = []
     parents = []
     timestamps = []
 
-    chosen_weights_ids = get_weights_ids(modelID=modelID, limit=LIMIT_CHOOSE)
+    chosen_weights_ids = get_weights_ids(modelID=model_id, limit=LIMIT_CHOOSE)
 
     metrics = []
     for blockID in chosen_weights_ids:
@@ -222,6 +222,7 @@ def get_weights_to_train(modelID: str):
         mu = get_model_update(blockID=m['blockID'])
         idx = get_client_id(pubkey=mu.pubkey)
         if idx != int(os.getenv("MY_ID")):
+            # get a tensor stored in ipfs
             w = get_weights(path=mu.model)
             if len(w) == 46:
                 w = get_weights(path=w)
@@ -350,3 +351,6 @@ def get_dishonest_peers():
         return list()
     dishonest_peers.split(",")
     return dishonest_peers
+
+def get_model_state_path(model_id):
+    return os.path.join(os.getenv("TMP_FOLDER"), "{}.pt".format(model_id))
