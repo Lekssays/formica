@@ -2,9 +2,10 @@ import asyncio
 import pickle
 import os
 import models
-from simulator.client.models.aggregators import FedEAggregator
+from models.aggregators import FedEAggregator
 import utils
 import random
+from tqdm import tqdm
 
 import numpy as np
 
@@ -16,6 +17,7 @@ from os.path import exists
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, TensorDataset
 
+from dataloader import TrainDataset, TestDataset
 
 torch.backends.cudnn.benchmark=True
 torch.manual_seed(42)
@@ -26,30 +28,52 @@ def peer_update(local_model, train_loader, epoch=5, attack_type=None):
     print(os.getenv("MY_NAME"), "attack_type", attack_type)
     dataset = utils.get_parameter(param="dataset")
     optimizer = get_optimizer(local_model)
+    adversarial_temperature = utils.get_parameter(param="adversarial_temperature")
+
     local_model.train()
     for _ in range(epoch):
-        for _, (data, target) in enumerate(train_loader):
-            data, target = data, target
-            optimizer.zero_grad()
-            output = local_model(data)
+        for batch in tqdm(train_loader):
+            positive_sample, negative_sample, sample_idx = batch
+            positive_sample = positive_sample.to(local_model.device)
+            negative_sample = negative_sample.to(local_model.device)
 
-            # Attack can be added here depending on the dataset
-            if attack_type is not None:
-                if dataset == "MNIST":
-                    for i, t in enumerate(target):
-                        if attack_type == 'lf':  # label flipping
-                            if t == 1:
-                                target[i] = torch.tensor(7)
-                        elif attack_type == 'backdoor':
-                            target[i] = 1  # set the label
-                            data[:, :, 27, 27] = torch.max(data)  # set the bottom right pixel to white.
-                        elif attack_type == 'untargeted':
-                            target[i] = random.randint(0, 9)
-                        elif attack_type == "untargeted_sybil":  # untargeted with sybils
-                            target[i] = 0
-            loss = F.nll_loss(output, target)
+            negative_score = local_model((positive_sample, negative_sample))
+
+            negative_score = (F.softmax(negative_score * adversarial_temperature, dim=1).detach() * F.logsigmoid(-negative_score)).sum(dim=1)
+
+            positive_score = local_model(positive_sample, neg=False)
+            positive_score = F.logsigmoid(positive_score).squeeze(dim=1)
+
+            positive_sample_loss = - positive_score.mean()
+            negative_sample_loss = - negative_score.mean()
+
+            loss = (positive_sample_loss + negative_sample_loss) / 2
+
+            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+
+            # data, target = data, target
+            # optimizer.zero_grad()
+            # output = local_model(data)
+
+            # # Attack can be added here depending on the dataset
+            # if attack_type is not None:
+            #     if dataset == "MNIST":
+            #         for i, t in enumerate(target):
+            #             if attack_type == 'lf':  # label flipping
+            #                 if t == 1:
+            #                     target[i] = torch.tensor(7)
+            #             elif attack_type == 'backdoor':
+            #                 target[i] = 1  # set the label
+            #                 data[:, :, 27, 27] = torch.max(data)  # set the bottom right pixel to white.
+            #             elif attack_type == 'untargeted':
+            #                 target[i] = random.randint(0, 9)
+            #             elif attack_type == "untargeted_sybil":  # untargeted with sybils
+            #                 target[i] = 0
+            # loss = F.nll_loss(output, target)
+            # loss.backward()
+            # optimizer.step()
 
     return loss.item(), local_model
 
@@ -122,7 +146,7 @@ def initialize(model_id):
 
     local_model =  models.load_model(model_name, model_id)
 
-    local_model.save_model(os.getenv("TMP_FOLDER"))
+    local_model.save_checkpoint(os.getenv("TMP_FOLDER"))
 
     # torch.save(local_model.get_state_dict(), os.getenv("TMP_FOLDER") + modelID + ".pt")
 
@@ -163,6 +187,41 @@ def evaluate(local_model, loss, attack=0):
     return acc, asr
 
 
+def get_train_data_loader(shuffle=True):
+    my_id = int(os.getenv("MY_ID"))
+    dataset = utils.get_parameter("dataset")
+    num_neg = int(utils.get_parameter("num_neg"))
+    batch_size = int(utils.get_parameter("batch_size"))
+
+
+    data_path = os.path.join(os.getenv("DATA_FOLDER"), dataset, str(my_id), "train.pkl")
+    with open(data_path, "rb") as f:
+        data = pickle.load(f)
+
+
+    print(data.keys())
+    nentity = len(np.unique(data["edge_index_ori"].reshape(-1)))
+    nrelation = len(np.unique(data['edge_type_ori']))
+
+    train_triples = np.stack((data['edge_index_ori'][0],
+                                data['edge_type_ori'],
+                                data['edge_index_ori'][1])).T
+
+    client_mask_ent = np.setdiff1d(np.arange(nentity),
+                                    np.unique(data['edge_index_ori'].reshape(-1)), assume_unique=True)
+
+    train_dataset = TrainDataset(train_triples, nentity, num_neg)
+
+    # dataloader
+    train_dataloader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        collate_fn=TrainDataset.collate_fn
+    )
+
+    return train_dataloader
+
 def train(local_model, alpha="100", attack_type="lf"):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -183,16 +242,19 @@ def train(local_model, alpha="100", attack_type="lf"):
     num_peers = utils.get_parameter(param="num_peers")
     epochs = utils.get_parameter(param="epochs")
     batch_size = utils.get_parameter(param="batch_size")
+    model_name = utils.get_parameter(param="model")
 
     attack = 0
     loss = 0
     my_id = int(os.getenv("MY_ID"))
-    if dataset == "MNIST":
-        train_obj = pickle.load(open(os.getenv("DATA_FOLDER") + dataset + "/" + str(my_id) + "/train_" + alpha +"_.pickle", "rb"))
-        x = torch.stack(train_obj.x)
-        y = torch.tensor(train_obj.y)
-        dat = TensorDataset(x, y)
-        train_loader = DataLoader(dat, batch_size=batch_size, shuffle=True)
+    train_loader = get_train_data_loader(shuffle=True)
+
+    # if dataset == "MNIST":
+    #     train_obj = pickle.load(open(os.getenv("DATA_FOLDER") + dataset + "/" + str(my_id) + "/train_" + alpha +"_.pickle", "rb"))
+    #     x = torch.stack(train_obj.x)
+    #     y = torch.tensor(train_obj.y)
+    #     dat = TensorDataset(x, y)
+    #     train_loader = DataLoader(dat, batch_size=batch_size, shuffle=True)
 
     dishonest_peers = utils.get_dishonest_peers()
     if os.getenv("MY_ID") in dishonest_peers:
@@ -221,12 +283,22 @@ def load_weights_into_model(weights):
 
 
 def get_optimizer(local_model):
-    dataset = utils.get_parameter(param="dataset")
-    opt = None
-    if dataset == "MNIST":
-        lr = 0.01
-        opt = optim.SGD(local_model.parameters(), lr=lr)
-    return opt
+    lr = utils.get_parameter(param="lr")
+
+    # state_dict = local_model.get_state_dict()
+
+
+
+    optimizer = optim.Adam([{'params': local_model.relation_embedding},
+                            {'params': local_model.entity_embedding}], lr=lr)
+    # dataset = utils.get_parameter(param="dataset")
+    # opt = None
+    # if dataset == "MNIST":
+    #     lr = 0.01
+    #     opt = optim.SGD(local_model.parameters(), lr=lr)
+    # return opt
+
+    return optimizer
 
 
 def load_local_model():
@@ -235,6 +307,39 @@ def load_local_model():
     if dataset == "MNIST":
         model = SFMNet(784, 10)
     return model
+
+
+def learn_locally(model_id):
+    model_name = utils.get_parameter("model")
+
+    # loop = asyncio.new_event_loop()
+    # asyncio.set_event_loop(loop)
+
+    print(os.getenv("MY_NAME"), "Learning")
+    # loop.run_until_complete(utils.send_log("Learning"))
+
+    model_state_path = utils.get_model_state_path(model_id)
+    print(model_state_path)
+    if exists(model_state_path):
+        message = "Weights to Train From = {}".format(str(len(model_state_path)))
+        print(message)
+        # loop.run_until_complete(utils.send_log(message))
+
+        print(os.getenv("MY_NAME"), "Training")
+
+        # local_state_dict = torch.load(model_state_path)
+        local_model = models.load_model(model_name, model_id)
+        local_model.load_checkpoint(utils.get_model_state_dir_path())
+        loss, attack, local_model = train(
+            local_model=local_model,
+            alpha=utils.get_parameter(param="alpha"),
+            attack_type=utils.get_parameter(param="attack_type"),
+        )
+
+    else:
+        print(os.getenv("MY_NAME"), "No weights to train from!")
+        # loop.run_until_complete(utils.send_log("No weights to train from!"))
+
 
 
 def learn(model_id):
@@ -246,32 +351,34 @@ def learn(model_id):
     print(os.getenv("MY_NAME"), "Learning")
     loop.run_until_complete(utils.send_log("Learning"))
 
-    weights, indices, parents = utils.get_weights_to_train(model_id=model_id)
+    state_dicts, indices, parents = utils.get_weights_to_train(model_id=model_id)
 
     # load local model
-    local_model = models.load_model(model_name)
+    model_state_path = utils.get_model_state_path(model_id)
+    if exists(model_state_path) and len(state_dicts) > 0:
+        local_state_dict = torch.load(model_state_path)
+        state_dicts.append(local_state_dict)
 
     # aggregate local model with weights
-    updated_local_model = FedEAggregator()(local_model, weights)
-    # local_model.aggregate(weights)
+    # aggregated_state_dict = FedEAggregator()(state_dicts, ent_freq_mat)
 
     peers_models = []
-    for w in weights:
+    for w in state_dicts:
         m = load_weights_into_model(w)
         peers_models.append(m)
 
-    model_state_path = utils.get_model_state_path(model_id)
-    if exists(model_state_path) and len(weights) > 0:
+
+    if exists(model_state_path) and len(state_dicts) > 0:
         w = torch.load(model_state_path)
         m = load_weights_into_model(w)
         peers_models.append(m)
 
     local_model = aggregate(peers_weights=peers_models, peers_indices=indices)
 
-    message = "Weights to Train From = " + str(len(weights))
+    message = "Weights to Train From = " + str(len(state_dicts))
     print(message)
     loop.run_until_complete(utils.send_log(message))
-    if len(weights) > 0:
+    if len(state_dicts) > 0:
         print(os.getenv("MY_NAME"), "Training")
         loss, attack, local_model = train(
             local_model=local_model,

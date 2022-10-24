@@ -35,7 +35,7 @@ class KGEModel(nn.Module):
             self.relation_embedding = torch.zeros(self.num_relations, args["hidden_dim"]).to(self.device).requires_grad_()
 
         nn.init.uniform_(
-            tensor=self.self.relation_embedding,
+            tensor=self.relation_embedding,
             a=-self.embedding_range.item(),
             b=self.embedding_range.item()
         )
@@ -52,14 +52,14 @@ class KGEModel(nn.Module):
         self.entity_embedding = state_dict["entity_embedding"]
         self.relation_embedding = state_dict["relation_embedding"]
 
-    def save_model(self, state_dir):
+    def save_checkpoint(self, state_dir):
         state_dict = self.get_state_dict()
 
         state_path = os.path.join(state_dir, "{}.pt".format(self.model_id))
 
         torch.save(state_dict, state_path)
 
-    def load_model(self, state_dir):
+    def load_checkpoint(self, state_dir):
         state_path = os.path.join(state_dir, "{}.pt".format(self.model_id))
         state_dict = torch.load(state_path, map_location=self.device)
         self.set_state_dict(state_dict)

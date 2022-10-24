@@ -31,6 +31,16 @@ def parse_args():
                         help = "Dataset: MNIST, CIFAR, KDD",
                         default = "MNIST",
                         required = True)
+    parser.add_argument('-m', '--model',
+                        dest = "model",
+                        help = "Model: TransE",
+                        default = "TransE",
+                        required = True)
+    parser.add_argument('-am', '--agg_mode',
+                        dest = "agg_mode",
+                        help = "Modes: Isolation",
+                        default = "TransE",
+                        required = True)
     parser.add_argument('-p', '--peers',
                         dest = "num_peers",
                         help = "Number of Peers ",
@@ -76,6 +86,26 @@ def parse_args():
                         help = "Enable dynamic committee",
                         default = "true",
                         required = False)
+    parser.add_argument('-adt', '--adversarial_temperature',
+                        dest = "adversarial_temperature",
+                        default=1.0,
+                        type=float)
+    parser.add_argument('-n', '--num_neg',
+                        dest = "num_neg",
+                        help = "number of negative sample for training KGE",
+                        default=256,
+                        type=int)
+
+    parser.add_argument('--lr', "--learning_rate",
+                        dest="learning_rate",
+                        help='learning rate for training KGE on FedE, Isolation or Collection',
+                        default=0.001,
+                        type=int)
+
+
+    # args = parser.parse_args()
+
+    # print(args)
     return parser.parse_args()
 
 
@@ -89,11 +119,17 @@ def generate_config():
     iterations = int(parse_args().iterations)
     dc = parse_args().dc
     attack_percentage = int(parse_args().attack_percentage)
-
+    model_name = parse_args().model
+    aggregation_mode = parse_args().agg_mode
     metadata = utils.get_dataset_metadata(dataset)
+    adversarial_temperature = parse_args().adversarial_temperature
+    num_neg = parse_args().num_neg
+    lr = parse_args().learning_rate
 
     config = {
         'dataset': dataset,
+        'model': model_name,
+        'aggregation_mode': aggregation_mode,
         'num_peers': num_peers,
         'iterations': iterations,
         'epochs': epochs,
@@ -102,7 +138,10 @@ def generate_config():
         'attack_type': attack_type,
         'dc': dc,
         'attack_percentage': attack_percentage,
-        'metadata': metadata
+        'metadata': metadata,
+        'adversarial_temperature': adversarial_temperature,
+        'num_neg': num_neg,
+        'lr': lr,
     }
 
     f = open('config.json', 'w')
@@ -116,21 +155,25 @@ def main():
     generate_config()
 
     model_id = "9313eb37-9fbd-47dc-bcbd-76c9cbf4cce4"
+    agg_mode = utils.get_parameter("aggregation_mode")
+
     if not exists(os.getenv("TMP_FOLDER") + model_id + ".dat"):
         local_model = learning.initialize(model_id)
-        local_state_dict = local_model.get_state_dict()
 
-        block_id = utils.publish_model_update(
-            modelID=model_id,
-            parents=[],
-            weights=local_state_dict['entity_embedding'].cpu().numpy(),
-            model=local_state_dict,
-            accuracy=0.0,
-        )
-        utils.store_my_latest_accuracy(accuracy=0.00)
-        utils.store_weight_id(modelID=model_id, blockID=block_id)
+        if agg_mode != "Isolation":
+            local_state_dict = local_model.get_state_dict()
 
-    learning.learn(model_id=model_id)
+            block_id = utils.publish_model_update(
+                modelID=model_id,
+                parents=[],
+                weights=local_state_dict['entity_embedding'].cpu().numpy(),
+                model=local_state_dict,
+                accuracy=0.0,
+            )
+            utils.store_my_latest_accuracy(accuracy=0.00)
+            utils.store_weight_id(modelID=model_id, blockID=block_id)
+
+    learning.learn_locally(model_id=model_id)
 
 
 if __name__ == "__main__":

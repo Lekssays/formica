@@ -66,10 +66,13 @@ def to_numpy_bytes(content) -> bytes:
     return buff.read()
 
 
-def from_bytes(content: bytes) -> torch.Tensor:
+def from_bytes_to_tensor(content: bytes) -> torch.Tensor:
     buff = io.BytesIO(content)
     loaded_content = torch.load(buff)
     return loaded_content
+
+def from_bytes_to_dict(content: bytes) -> dict:
+    raise Exception()
 
 
 def send_model_update(model_update: modelUpdate_pb2.ModelUpdate):
@@ -109,11 +112,11 @@ def store_resource_on_redis(key: str, content: bytes):
     return res
 
 
-def get_model_update(blockID: str) -> modelUpdate_pb2.ModelUpdate:
-    model_update_bytes = get_resource_from_leveldb(key=blockID)
+def get_model_update(block_id: str) -> modelUpdate_pb2.ModelUpdate:
+    model_update_bytes = get_resource_from_leveldb(key=block_id)
     model_update = None
     if model_update_bytes is None:
-        model_update, _ = parse_payload(blockID=blockID)
+        model_update, _ = parse_payload(blockID=block_id)
     else:
         model_update = text_format.Parse(model_update_bytes, modelUpdate_pb2.ModelUpdate())
     return model_update
@@ -164,19 +167,22 @@ def parse_payload(blockID: str):
     return parsed_payload, purpose
 
 
-def get_weights(path: str) -> torch.Tensor:
+def get_weights_tensor(path: str) -> torch.Tensor:
     weights_from_ipfs = get_content_from_ipfs(path=path)
-    return from_bytes(weights_from_ipfs)
+    return from_bytes_to_tensor(weights_from_ipfs)
 
+def get_weights_dict(path: str) -> dict:
+    weights_from_ipfs = get_content_from_ipfs(path=path)
+    return from_bytes_to_dict(weights_from_ipfs)
 
 def get_gradients(path: str) -> torch.Tensor:
     gradients_from_ipfs = get_content_from_ipfs(path=path)
-    return from_bytes(gradients_from_ipfs)
+    return from_bytes_to_tensor(gradients_from_ipfs)
 
 
-def get_weights_ids(modelID, limit):
+def get_weights_ids(model_id, limit):
     weights = []
-    with open(os.getenv("TMP_FOLDER") + modelID + ".dat", "r") as f:
+    with open(os.getenv("TMP_FOLDER") + model_id + ".dat", "r") as f:
         content = f.readlines()
         for line in content:
             line = line.strip()
@@ -202,13 +208,13 @@ def get_weights_to_train(model_id: str):
     parents = []
     timestamps = []
 
-    chosen_weights_ids = get_weights_ids(modelID=model_id, limit=LIMIT_CHOOSE)
+    chosen_weights_ids = get_weights_ids(model_id=model_id, limit=LIMIT_CHOOSE)
 
     metrics = []
-    for blockID in chosen_weights_ids:
-        mu = get_model_update(blockID=blockID)
+    for block_id in chosen_weights_ids:
+        mu = get_model_update(block_id=block_id)
         tmp = {
-            'blockID': blockID,
+            'blockID': block_id,
             'timestamp': mu.timestamp,
         }
         metrics.append(tmp)
@@ -219,13 +225,13 @@ def get_weights_to_train(model_id: str):
     metrics = metrics[:limit]
 
     for m in metrics:
-        mu = get_model_update(blockID=m['blockID'])
+        mu = get_model_update(block_id=m['blockID'])
         idx = get_client_id(pubkey=mu.pubkey)
         if idx != int(os.getenv("MY_ID")):
             # get a tensor stored in ipfs
-            w = get_weights(path=mu.model)
+            w = get_weights_dict(path=mu.model)
             if len(w) == 46:
-                w = get_weights(path=w)
+                w = get_weights_dict(path=w)
             weights.append(w)
             indices.append(idx)
             parents.append(m['blockID'])
@@ -352,5 +358,8 @@ def get_dishonest_peers():
     dishonest_peers.split(",")
     return dishonest_peers
 
+def get_model_state_dir_path():
+    return os.path.join(os.getenv("TMP_FOLDER"))
+
 def get_model_state_path(model_id):
-    return os.path.join(os.getenv("TMP_FOLDER"), "{}.pt".format(model_id))
+    return os.path.join(get_model_state_dir_path(), "{}.pt".format(model_id))

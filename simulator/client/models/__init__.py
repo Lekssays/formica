@@ -13,8 +13,8 @@ def load_model(model_name, model_id = ""):
         device_name = config.get("device", "cpu")
 
         # required params
-        num_entities = config["metadata"]["n_entities"]
-        num_relations = config["metadata"]["n_relations"]
+        num_entities = config["metadata"]["num_entities"]
+        num_relations = config["metadata"]["num_relations"]
 
         args = {
             "gamma": gamma,
