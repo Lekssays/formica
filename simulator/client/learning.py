@@ -24,7 +24,7 @@ torch.manual_seed(42)
 np.random.seed(42)
 
 
-def peer_update(local_model, train_loader, epoch=5, attack_type=None):
+def peer_update(local_model, train_loader, epoch=1, attack_type=None):
     print(os.getenv("MY_NAME"), "attack_type", attack_type)
     dataset = utils.get_parameter(param="dataset")
     optimizer = get_optimizer(local_model)
@@ -93,31 +93,70 @@ def aggregate(peers_indices, peers_weights=[]):
 
 def test(local_model, test_loader, attack):
     """This function test the global model on test data and returns test loss and test accuracy """
-    local_model.eval()
+    # local_model.eval()
     test_loss = 0
     correct = 0
     dataset = utils.get_parameter(param="dataset")
-    with torch.no_grad():
-        for data, target in test_loader:
-            data, target = data, target
-            output = local_model(data)
 
-            # sum up batch loss
-            test_loss += F.nll_loss(output, target, reduction='sum').item()
+    results = {
+        "count": 0.0,
+        "mr": 0.0,
+        "mrr": 0.0,
+    }
 
-            # get the index of the max log-probability
-            pred = output.argmax(dim=1, keepdim=True)
-            correct += pred.eq(target.view_as(pred)).sum().item()
+    hit_values = [1,5,10]
+    for k in hit_values:
+        results["hits@{}".format(k)] = 0
 
-            if dataset == "MNIST":
-                for i, t in enumerate(target):
-                    if t == 1 and pred[i] == 7:
-                        attack += 1
+    for batch in test_loader:
+        triplets, labels = batch
+        triplets, labels = triplets.to(local_model.device), labels.to(local_model.device)
+        head_idx, rel_idx, tail_idx = triplets[:, 0], triplets[:, 1], triplets[:, 2]
+        pred = local_model((triplets, None))
+        b_range = torch.arange(pred.size()[0], device=local_model.device)
+        target_pred = pred[b_range, tail_idx]
+        pred = torch.where(labels.byte(), -torch.ones_like(pred) * 10000000, pred)
+        pred[b_range, tail_idx] = target_pred
 
-    test_loss /= len(test_loader.dataset)
-    acc = correct / len(test_loader.dataset)
+        ranks = 1 + torch.argsort(torch.argsort(pred, dim=1, descending=True),
+                                    dim=1, descending=False)[b_range, tail_idx]
 
-    return test_loss, acc, attack
+        ranks = ranks.float()
+        count = torch.numel(ranks)
+
+        results['count'] += count
+        results['mr'] += torch.sum(ranks).item()
+        results['mrr'] += torch.sum(1.0 / ranks).item()
+
+        for k in hit_values:
+            results['hits@{}'.format(k)] += torch.numel(ranks[ranks <= k])
+
+    for k, v in results.items():
+        if k != 'count':
+            results[k] /= results['count']
+
+    # with torch.no_grad():
+    #     for data, target in test_loader:
+    #         data, target = data, target
+    #         output = local_model(data)
+
+    #         # sum up batch loss
+    #         test_loss += F.nll_loss(output, target, reduction='sum').item()
+
+    #         # get the index of the max log-probability
+    #         pred = output.argmax(dim=1, keepdim=True)
+    #         correct += pred.eq(target.view_as(pred)).sum().item()
+
+    #         if dataset == "MNIST":
+    #             for i, t in enumerate(target):
+    #                 if t == 1 and pred[i] == 7:
+    #                     attack += 1
+
+    # test_loss /= len(test_loader.dataset)
+    # acc = correct / len(test_loader.dataset)
+
+    attack = 0 # IMPORTANT: not sure how to calculate attack
+    return results, attack
 
 
 def load_data():
@@ -153,11 +192,13 @@ def initialize(model_id):
     return local_model
 
 
-def evaluate(local_model, loss, attack=0):
+def evaluate(local_model, test_loader, loss, attack=0):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    losses_test = []
-    acc_test = []
+
+    results_test = []
+    # losses_test = []
+    # acc_test = []
 
     num_peers = utils.get_parameter(param="num_peers")
     batch_size = utils.get_parameter(param="batch_size")
@@ -168,12 +209,15 @@ def evaluate(local_model, loss, attack=0):
     attack_percentage = utils.get_parameter(param="attack_percentage")
     attack_type = utils.get_parameter(param="attack_type")
 
-    test_loader, _, _ = load_data()
-    test_loss, acc, attack = test(local_model=local_model, test_loader=test_loader, attack=attack)
-    losses_test.append(test_loss)
-    acc_test.append(acc)
+    # test_loader, _, _ = load_data()
+    results, attack = test(local_model=local_model, test_loader=test_loader, attack=attack)
+    results_test.append(results)
+    # losses_test.append(test_loss)
+    # acc_test.append(acc)
 
-    message = 'average train loss %0.6g | test loss %0.6g | test acc: %0.6f' % (loss / num_peers, test_loss, acc)
+    results_str = ",".join(map(lambda item: "{}={}".format(item[0], item[1]), results.items()))
+
+    message = 'average train loss %0.6g | test results %s' % (loss / num_peers, results_str)
     print(message)
     loop.run_until_complete(utils.send_log(message))
     asr = attack/(len(test_loader)*batch_size)
@@ -182,47 +226,78 @@ def evaluate(local_model, loss, attack=0):
     loop.run_until_complete(utils.send_log(message))
 
     metric_filename = "{}_{}_{}_{}_{}_{}.csv".format(dataset, str(alpha), str(iterations), dc, attack_type, str(attack_percentage))
-    log_message = os.getenv("MY_NAME") + "," + str(loss / num_peers) + "," + str(test_loss) + "," + str(acc) + "," + str(asr) + "!" + metric_filename
+
+
+    log_message = os.getenv("MY_NAME") + "," + str(loss / num_peers) + "," + results_str + "!" + metric_filename
     loop.run_until_complete(utils.send_log(log_message))
-    return acc, asr
+    return results, asr
 
-
-def get_train_data_loader(shuffle=True):
+def get_all_local_data_loaders(shuffle=True):
     my_id = int(os.getenv("MY_ID"))
     dataset = utils.get_parameter("dataset")
     num_neg = int(utils.get_parameter("num_neg"))
     batch_size = int(utils.get_parameter("batch_size"))
+    nentity = utils.get_parameter("metadata")["num_entities"]
 
+    train_data_path = os.path.join(os.getenv("DATA_FOLDER"), dataset, str(my_id), "train.pkl")
+    valid_data_path = os.path.join(os.getenv("DATA_FOLDER"), dataset, str(my_id), "valid.pkl")
+    test_data_path = os.path.join(os.getenv("DATA_FOLDER"), dataset, str(my_id), "test.pkl")
 
-    data_path = os.path.join(os.getenv("DATA_FOLDER"), dataset, str(my_id), "train.pkl")
-    with open(data_path, "rb") as f:
-        data = pickle.load(f)
+    with open(train_data_path, "rb") as train_f, open(valid_data_path, "rb") as valid_f, open(test_data_path, "rb") as test_f:
+        train_data = pickle.load(train_f)
+        valid_data = pickle.load(valid_f)
+        test_data = pickle.load(test_f)
 
+    nrelation = len(np.unique(train_data['edge_type']))
 
-    print(data.keys())
-    nentity = len(np.unique(data["edge_index_ori"].reshape(-1)))
-    nrelation = len(np.unique(data['edge_type_ori']))
+    train_triples = np.stack((train_data['edge_index_ori'][0],
+                                train_data['edge_type'],
+                                train_data['edge_index_ori'][1])).T
 
-    train_triples = np.stack((data['edge_index_ori'][0],
-                                data['edge_type_ori'],
-                                data['edge_index_ori'][1])).T
+    valid_triples = np.stack((valid_data['edge_index_ori'][0],
+                                valid_data['edge_type'],
+                                valid_data['edge_index_ori'][1])).T
+
+    test_triples = np.stack((test_data['edge_index_ori'][0],
+                                test_data['edge_type'],
+                                test_data['edge_index_ori'][1])).T
 
     client_mask_ent = np.setdiff1d(np.arange(nentity),
-                                    np.unique(data['edge_index_ori'].reshape(-1)), assume_unique=True)
+                                    np.unique(train_data['edge_index_ori'].reshape(-1)), assume_unique=True)
 
+    all_triples = np.concatenate([train_triples, valid_triples, test_triples])
     train_dataset = TrainDataset(train_triples, nentity, num_neg)
+    valid_dataset = TestDataset(valid_triples, all_triples, nentity, client_mask_ent)
+    test_dataset = TestDataset(test_triples, all_triples, nentity, client_mask_ent)
 
     # dataloader
     train_dataloader = DataLoader(
         train_dataset,
         batch_size=batch_size,
-        shuffle=shuffle,
+        shuffle=True,
         collate_fn=TrainDataset.collate_fn
     )
 
-    return train_dataloader
+    valid_dataloader = DataLoader(
+        valid_dataset,
+        batch_size=batch_size,
+        collate_fn=TestDataset.collate_fn
+    )
 
-def train(local_model, alpha="100", attack_type="lf"):
+    test_dataloader = DataLoader(
+        test_dataset,
+        batch_size=batch_size,
+        collate_fn=TestDataset.collate_fn
+    )
+
+    ent_freq = torch.zeros(nentity)
+    for e in train_data['edge_index_ori'].reshape(-1):
+        ent_freq[e] += 1
+
+    return train_dataloader, valid_dataloader, test_dataloader, ent_freq
+
+
+def train(local_model, train_loader, alpha="100", attack_type="lf"):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
@@ -247,7 +322,7 @@ def train(local_model, alpha="100", attack_type="lf"):
     attack = 0
     loss = 0
     my_id = int(os.getenv("MY_ID"))
-    train_loader = get_train_data_loader(shuffle=True)
+    # train_loader = get_train_data_loader(shuffle=True)
 
     # if dataset == "MNIST":
     #     train_obj = pickle.load(open(os.getenv("DATA_FOLDER") + dataset + "/" + str(my_id) + "/train_" + alpha +"_.pickle", "rb"))
@@ -330,12 +405,20 @@ def learn_locally(model_id):
         # local_state_dict = torch.load(model_state_path)
         local_model = models.load_model(model_name, model_id)
         local_model.load_checkpoint(utils.get_model_state_dir_path())
+
+        # load train, valid, test dataloaders
+        train_loader, valid_dataloader, test_dataloader, entity_freq = get_all_local_data_loaders()
+
+        # acc, asr = evaluate(local_model=local_model, test_loader=test_dataloader, loss=0, attack=0)
+
         loss, attack, local_model = train(
             local_model=local_model,
+            train_loader=train_loader,
             alpha=utils.get_parameter(param="alpha"),
             attack_type=utils.get_parameter(param="attack_type"),
         )
 
+        acc, asr = evaluate(local_model=local_model, test_loader=test_dataloader, loss=loss, attack=attack)
     else:
         print(os.getenv("MY_NAME"), "No weights to train from!")
         # loop.run_until_complete(utils.send_log("No weights to train from!"))
@@ -395,22 +478,22 @@ def learn(model_id):
         if attacker == False:
             print(os.getenv("MY_NAME"), "Evaluating")
             loop.run_until_complete(utils.send_log("Evaluating"))
-            acc, asr = evaluate(local_model=local_model, loss=loss, attack=attack)
+            results, asr = evaluate(local_model=local_model, loss=loss, attack=attack)
 
-        if acc >= utils.get_my_latest_accuracy() or attacker:
-            print(os.getenv("MY_NAME"), "Publishing")
-            loop.run_until_complete(utils.send_log("Publishing"))
-            torch.save(local_model.state_dict(), os.getenv("TMP_FOLDER") + model_id + ".pt")
-            blockID = utils.publish_model_update(
-                modelID=model_id,
-                weights=local_model.state_dict()['fc.weight'].cpu().numpy(),
-                accuracy=acc,
-                parents=parents,
-                model=local_model.state_dict()
-            )
-            print(os.getenv("MY_NAME"), acc, blockID)
-            utils.store_my_latest_accuracy(accuracy=acc)
-            loop.run_until_complete(utils.send_log(str(acc) + " " + str(blockID)))
+        # if acc >= utils.get_my_latest_accuracy() or attacker:
+        print(os.getenv("MY_NAME"), "Publishing")
+        loop.run_until_complete(utils.send_log("Publishing"))
+        torch.save(local_model.state_dict(), os.getenv("TMP_FOLDER") + model_id + ".pt")
+        blockID = utils.publish_model_update(
+            modelID=model_id,
+            weights=local_model.state_dict()['fc.weight'].cpu().numpy(),
+            accuracy=acc,
+            parents=parents,
+            model=local_model.state_dict()
+        )
+        print(os.getenv("MY_NAME"), acc, blockID)
+        utils.store_my_latest_accuracy(accuracy=acc)
+        loop.run_until_complete(utils.send_log(str(acc) + " " + str(blockID)))
     else:
         print(os.getenv("MY_NAME"), "No weights to train from!")
         loop.run_until_complete(utils.send_log("No weights to train from!"))

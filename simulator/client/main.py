@@ -54,7 +54,7 @@ def parse_args():
     parser.add_argument('-e', '--epochs',
                         dest = "epochs",
                         help = "Number of Training Epochs",
-                        default = 5,
+                        default = 1,
                         required = False)
     parser.add_argument('-bz', '--batch_size',
                         dest = "batch_size",

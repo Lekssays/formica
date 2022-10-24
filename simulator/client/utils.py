@@ -71,8 +71,6 @@ def from_bytes_to_tensor(content: bytes) -> torch.Tensor:
     loaded_content = torch.load(buff)
     return loaded_content
 
-def from_bytes_to_dict(content: bytes) -> dict:
-    raise Exception()
 
 
 def send_model_update(model_update: modelUpdate_pb2.ModelUpdate):
@@ -170,10 +168,6 @@ def parse_payload(blockID: str):
 def get_weights_tensor(path: str) -> torch.Tensor:
     weights_from_ipfs = get_content_from_ipfs(path=path)
     return from_bytes_to_tensor(weights_from_ipfs)
-
-def get_weights_dict(path: str) -> dict:
-    weights_from_ipfs = get_content_from_ipfs(path=path)
-    return from_bytes_to_dict(weights_from_ipfs)
 
 def get_gradients(path: str) -> torch.Tensor:
     gradients_from_ipfs = get_content_from_ipfs(path=path)
