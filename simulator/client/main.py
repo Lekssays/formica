@@ -159,21 +159,18 @@ def main():
 
     if not exists(os.getenv("TMP_FOLDER") + model_id + ".dat"):
         local_model = learning.initialize(model_id)
+        entity_freq = learning.get_entity_freq()
+        block_id = utils.publish_model_update(
+            modelID=model_id,
+            parents=[],
+            weights=local_model.entity_embedding.detach().numpy(),
+            model=learning.get_publishing_data(local_model, entity_freq),
+            accuracy=0.0,
+        )
+        utils.store_my_latest_accuracy(accuracy=0.00)
+        utils.store_weight_id(modelID=model_id, blockID=block_id)
 
-        if agg_mode != "Isolation":
-            local_state_dict = local_model.get_state_dict()
-
-            block_id = utils.publish_model_update(
-                modelID=model_id,
-                parents=[],
-                weights=local_state_dict['entity_embedding'].cpu().numpy(),
-                model=local_state_dict,
-                accuracy=0.0,
-            )
-            utils.store_my_latest_accuracy(accuracy=0.00)
-            utils.store_weight_id(modelID=model_id, blockID=block_id)
-
-    learning.learn_locally(model_id=model_id)
+    learning.learn(model_id=model_id)
 
 
 if __name__ == "__main__":

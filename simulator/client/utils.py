@@ -58,6 +58,12 @@ def to_bytes(content: OrderedDict) -> bytes:
     buff.seek(0)
     return buff.read()
 
+def from_bytes_to_dict(content: bytes) -> OrderedDict:
+    buff = io.BytesIO(content)
+    loaded_content = torch.load(buff)
+    print(loaded_content)
+    raise Exception()
+    return loaded_content
 
 def to_numpy_bytes(content) -> bytes:
     buff = TemporaryFile()
@@ -169,6 +175,11 @@ def get_weights_tensor(path: str) -> torch.Tensor:
     weights_from_ipfs = get_content_from_ipfs(path=path)
     return from_bytes_to_tensor(weights_from_ipfs)
 
+def get_published_data_dict(path: str) -> OrderedDict:
+    content_from_ipfs =  get_content_from_ipfs(path=path)
+    return from_bytes_to_dict(content_from_ipfs)
+
+
 def get_gradients(path: str) -> torch.Tensor:
     gradients_from_ipfs = get_content_from_ipfs(path=path)
     return from_bytes_to_tensor(gradients_from_ipfs)
@@ -223,9 +234,9 @@ def get_weights_to_train(model_id: str):
         idx = get_client_id(pubkey=mu.pubkey)
         if idx != int(os.getenv("MY_ID")):
             # get a tensor stored in ipfs
-            w = get_weights_dict(path=mu.model)
+            w = get_published_data_dict(path=mu.model)
             if len(w) == 46:
-                w = get_weights_dict(path=w)
+                w = get_published_data_dict(path=w)
             weights.append(w)
             indices.append(idx)
             parents.append(m['blockID'])
@@ -344,6 +355,9 @@ async def send_log(message: str):
     async with websockets.connect(uri) as websocket:
         await websocket.send(message)
 
+def get_evaluation_results_str(results):
+    results_str = ",".join(map(lambda item: "{}={}".format(item[0], item[1]), results.items()))
+    return results_str
 
 def get_dishonest_peers():
     dishonest_peers = os.getenv("DISHONEST_PEERS")

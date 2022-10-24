@@ -1,6 +1,7 @@
 import asyncio
 import pickle
 import os
+from typing import OrderedDict
 import models
 from models.aggregators import FedEAggregator
 import utils
@@ -215,7 +216,7 @@ def evaluate(local_model, test_loader, loss, attack=0):
     # losses_test.append(test_loss)
     # acc_test.append(acc)
 
-    results_str = ",".join(map(lambda item: "{}={}".format(item[0], item[1]), results.items()))
+    results_str = utils.get_evaluation_results_str(results)
 
     message = 'average train loss %0.6g | test results %s' % (loss / num_peers, results_str)
     print(message)
@@ -248,18 +249,18 @@ def get_all_local_data_loaders(shuffle=True):
         valid_data = pickle.load(valid_f)
         test_data = pickle.load(test_f)
 
-    nrelation = len(np.unique(train_data['edge_type']))
+    nrelation = len(np.unique(train_data['edge_type_ori']))
 
     train_triples = np.stack((train_data['edge_index_ori'][0],
-                                train_data['edge_type'],
+                                train_data['edge_type_ori'],
                                 train_data['edge_index_ori'][1])).T
 
     valid_triples = np.stack((valid_data['edge_index_ori'][0],
-                                valid_data['edge_type'],
+                                valid_data['edge_type_ori'],
                                 valid_data['edge_index_ori'][1])).T
 
     test_triples = np.stack((test_data['edge_index_ori'][0],
-                                test_data['edge_type'],
+                                test_data['edge_type_ori'],
                                 test_data['edge_index_ori'][1])).T
 
     client_mask_ent = np.setdiff1d(np.arange(nentity),
@@ -296,6 +297,21 @@ def get_all_local_data_loaders(shuffle=True):
 
     return train_dataloader, valid_dataloader, test_dataloader, ent_freq
 
+
+def get_entity_freq():
+    nentity = utils.get_parameter("metadata")["num_entities"]
+    my_id = int(os.getenv("MY_ID"))
+    dataset = utils.get_parameter("dataset")
+    train_data_path = os.path.join(os.getenv("DATA_FOLDER"), dataset, str(my_id), "train.pkl")
+
+    with open(train_data_path, "rb") as train_f:
+        train_data = pickle.load(train_f)
+
+    ent_freq = torch.zeros(nentity)
+    for e in train_data['edge_index_ori'].reshape(-1):
+        ent_freq[e] += 1
+
+    return ent_freq
 
 def train(local_model, train_loader, alpha="100", attack_type="lf"):
     loop = asyncio.new_event_loop()
@@ -387,8 +403,8 @@ def load_local_model():
 def learn_locally(model_id):
     model_name = utils.get_parameter("model")
 
-    # loop = asyncio.new_event_loop()
-    # asyncio.set_event_loop(loop)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
     print(os.getenv("MY_NAME"), "Learning")
     # loop.run_until_complete(utils.send_log("Learning"))
@@ -398,7 +414,7 @@ def learn_locally(model_id):
     if exists(model_state_path):
         message = "Weights to Train From = {}".format(str(len(model_state_path)))
         print(message)
-        # loop.run_until_complete(utils.send_log(message))
+        loop.run_until_complete(utils.send_log(message))
 
         print(os.getenv("MY_NAME"), "Training")
 
@@ -424,6 +440,14 @@ def learn_locally(model_id):
         # loop.run_until_complete(utils.send_log("No weights to train from!"))
 
 
+def get_publishing_data(local_model, local_entity_freq):
+    data = OrderedDict()
+    data["entity_embedding"] = local_model.entity_embedding
+    data["relation_embedding"] = local_model.relation_embedding
+    data["entity_freq"] = local_entity_freq
+
+    return data
+
 
 def learn(model_id):
     model_name = utils.get_parameter(param="model")
@@ -443,20 +467,24 @@ def learn(model_id):
         state_dicts.append(local_state_dict)
 
     # aggregate local model with weights
-    # aggregated_state_dict = FedEAggregator()(state_dicts, ent_freq_mat)
+    aggregated_state_dict = FedEAggregator()(state_dicts)
+    local_model = models.load_model(model_name)
+    local_model.set_state_dict(aggregated_state_dict)
 
-    peers_models = []
-    for w in state_dicts:
-        m = load_weights_into_model(w)
-        peers_models.append(m)
+    # peers_models = []
+    # for w in state_dicts:
+    #     m = load_weights_into_model(w)
+    #     peers_models.append(m)
 
 
-    if exists(model_state_path) and len(state_dicts) > 0:
-        w = torch.load(model_state_path)
-        m = load_weights_into_model(w)
-        peers_models.append(m)
+    # if exists(model_state_path) and len(state_dicts) > 0:
+    #     w = torch.load(model_state_path)
+    #     m = load_weights_into_model(w)
+    #     peers_models.append(m)
 
-    local_model = aggregate(peers_weights=peers_models, peers_indices=indices)
+    # local_model = aggregate(peers_weights=peers_models, peers_indices=indices)
+
+    train_loader, valid_dataloader, test_dataloader, entity_freq = get_all_local_data_loaders()
 
     message = "Weights to Train From = " + str(len(state_dicts))
     print(message)
@@ -465,9 +493,15 @@ def learn(model_id):
         print(os.getenv("MY_NAME"), "Training")
         loss, attack, local_model = train(
             local_model=local_model,
+            train_loader=train_loader,
             alpha=utils.get_parameter(param="alpha"),
             attack_type=utils.get_parameter(param="attack_type"),
         )
+        # loss, attack, local_model = train(
+        #     local_model=local_model,
+        #     alpha=utils.get_parameter(param="alpha"),
+        #     attack_type=utils.get_parameter(param="attack_type"),
+        # )
 
         attacker = False
         dishonest_peers = utils.get_dishonest_peers()
@@ -475,25 +509,29 @@ def learn(model_id):
             attacker = True
 
         acc = 0.0
+        results = None
         if attacker == False:
             print(os.getenv("MY_NAME"), "Evaluating")
             loop.run_until_complete(utils.send_log("Evaluating"))
-            results, asr = evaluate(local_model=local_model, loss=loss, attack=attack)
+            results, asr = evaluate(local_model=local_model, test_loader=test_dataloader, loss=loss, attack=attack)
+            # results, asr = evaluate(local_model=local_model, loss=loss, attack=attack)
 
         # if acc >= utils.get_my_latest_accuracy() or attacker:
         print(os.getenv("MY_NAME"), "Publishing")
         loop.run_until_complete(utils.send_log("Publishing"))
-        torch.save(local_model.state_dict(), os.getenv("TMP_FOLDER") + model_id + ".pt")
+        local_model.save_checkpoint(utils.get_model_state_dir_path())
+        # torch.save(local_model.state_dict(), os.getenv("TMP_FOLDER") + model_id + ".pt")
         blockID = utils.publish_model_update(
             modelID=model_id,
-            weights=local_model.state_dict()['fc.weight'].cpu().numpy(),
+            weights=local_model.entity_embedding.detach().numpy(),
             accuracy=acc,
             parents=parents,
-            model=local_model.state_dict()
+            model=get_publishing_data(local_model, entity_freq)
         )
+        results_str = utils.get_evaluation_results_str(results)
         print(os.getenv("MY_NAME"), acc, blockID)
-        utils.store_my_latest_accuracy(accuracy=acc)
-        loop.run_until_complete(utils.send_log(str(acc) + " " + str(blockID)))
+        utils.store_my_latest_accuracy(accuracy=results_str)
+        loop.run_until_complete(utils.send_log(results_str + " " + str(blockID)))
     else:
         print(os.getenv("MY_NAME"), "No weights to train from!")
         loop.run_until_complete(utils.send_log("No weights to train from!"))
