@@ -181,11 +181,11 @@ func main() {
 			modelID := "9313eb37-9fbd-47dc-bcbd-76c9cbf4cce4"
 
 			dataset := args[1]
-			model_name := args[2]
+			// model_name := args[2]
 
-			n_entities := -1
-			n_relations := -1
-			n_dimensions := -1
+			n_entities := 1
+			n_relations := 1
+			// n_dimensions := -1
 
 			is_valid := true
 			if dataset == "FB15k237-Fed3" {
@@ -196,15 +196,15 @@ func main() {
 				is_valid = false
 			}
 
-			if model_name == "DistMult" {
-				n_dimensions = 50 // should replace this with those in FedE
-			} else {
-				fmt.Printf("Model %s is unsupported", model_name)
-				is_valid = false
-			}
+			// if model_name == "DistMult" {
+			// 	n_dimensions = 50 // should replace this with those in FedE
+			// } else {
+			// 	fmt.Printf("Model %s is unsupported", model_name)
+			// 	is_valid = false
+			// }
 
 			if is_valid {
-				err := consensus.Initialize(modelID, n_entities, n_relations, n_dimensions)
+				err := consensus.Initialize(modelID, n_entities, n_relations)
 				if err != nil {
 					fmt.Errorf(err.Error())
 				}

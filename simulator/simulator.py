@@ -98,9 +98,9 @@ def start_learning(model_name, dataset, peers, dc, iterations, attack_percentage
 
     for peer in peers[:peers_len]:
         if attack_type is None:
-            command = "docker exec -it {} python3 /client/main.py -m {} -d {} -al {} -ap {} -dc {} -i {}".format(peer, model_name, dataset, alpha, str(attack_percentage), dc, str(iterations))
+            command = "docker exec -it {} python3 /client/main.py -m {} -d {} -am {} -al {} -ap {} -dc {} -i {}".format(peer, model_name, dataset, "FedE", alpha, str(attack_percentage), dc, str(iterations))
         else:
-            command = "docker exec -it {} python3 /client/main.py -m {} -d {} -al {} -at {} -ap {} -dc {} -i {}".format(peer, model_name, dataset, alpha, attack_type, str(attack_percentage), dc, str(iterations))
+            command = "docker exec -it {} python3 /client/main.py -m {} -d {} -am {} -al {} -at {} -ap {} -dc {} -i {}".format(peer, model_name, dataset, "FedE", alpha, attack_type, str(attack_percentage), dc, str(iterations))
         print("Learning ", peer)
         subprocess.call(command, shell=True)
 
@@ -270,7 +270,8 @@ def main():
                 peers_len=peers_len,
                 alpha=alpha,
                 dc=dc,
-                iterations=iterations
+                iterations=iterations,
+                model_name=model_name
             )
 
         if dc == "true":

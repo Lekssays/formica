@@ -39,7 +39,7 @@ const (
 	ALIGNMENT_PURPOSE_ID  = 23
 	GRADIENTS_PURPOSE_ID  = 24
 	PHI_PURPOSE_ID        = 25
-	IPFS_ENDPOINT         = "http://0.0.0.0:5001"
+	IPFS_ENDPOINT         = "http://193.206.183.35:5001"
 )
 
 type Payload struct {

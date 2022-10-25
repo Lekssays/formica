@@ -12,13 +12,13 @@ A DAG-based Fully-Decentralized Learning Framework
 
 - Install Redis
 
-- Clone GoShimmer (IOTA 2.0) v0.9.8 in Home Directory: 
+- Clone GoShimmer (IOTA 2.0) v0.9.8 in Home Directory:
 
 ```
 git clone https://github.com/iotaledger/goshimmer.git
 ```
 
-- Clone formica in Home Directory: 
+- Clone formica in Home Directory:
 
 ```
 git clone https://github.com/lekssays/formica.git
@@ -34,30 +34,30 @@ cp -R $HOME/formica/protocol/plugins/formica $HOME/goshimmer/plugins/formica
 - Integrate formica plugin in Goshimmer:
     - Add `"github.com/Lekssays/formica/protocol/plugins/formica"` to imports in `$HOME/goshimmer/plugins/research.go`
     - Add `formica.Plugin,"` after 	`chat.Plugin,` in `$HOME/goshimmer/plugins/research.go`
-    - Install formica plugin locally 
+    - Install formica plugin locally
     ```
     go get github.com/Lekssays/formica/protocol/plugins/formica
     ```
 
-- Run GoShimmer Network: 
+- Run GoShimmer Network:
 
 ```
 cd $HOME/goshimmer/tools/docker-network && ./run.sh
 ```
 
-- Create formica network 
+- Create formica network
 
 ```
 docker network create -d bridge formica
 ```
 
-- Run IPFS node: 
+- Run IPFS node:
 
 ```
-docker run -d --name ipfs.formica.io --network="formica" -v $HOME/formica/simulator/ipfs/export:/export -v $HOME/formica/simulator/ipfs/data:/data/ipfs -p 4001:4001 -p 4001:4001/udp -p 0.0.0.0:8088:8088 -p 0.0.0.0:5001:5001 ipfs/go-ipfs:latest
+docker run -d --name ipfs.formica.io --network="formica" -v /data/repositories/formica/simulator/ipfs/export:/export -v /data/repositories/formica/simulator/ipfs/data:/data/ipfs -p 4001:4001 -p 4001:4001/udp -p 0.0.0.0:8088:8088 -p 0.0.0.0:5001:5001 ipfs/go-ipfs:latest
 ```
 
-- Install Python Dependecies: 
+- Install Python Dependecies:
 
 ```
 cd $HOME/formica/simulator/ && pip3 install -r requirements.txt
@@ -69,13 +69,13 @@ cd $HOME/formica/simulator/ && pip3 install -r requirements.txt
 
 - Rename `example.env` to `.env` and execute `source .env`
 
-- Start Log Server: 
+- Start Log Server:
 
 ```
 cd $HOME/formica/logs/ && python3 server.py
 ```
 
-- Install golang dependencies 
+- Install golang dependencies
 
 ```
 cd $HOME/formica/protocol/ && go mod tidy && go build

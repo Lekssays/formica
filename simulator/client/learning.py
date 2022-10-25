@@ -3,7 +3,7 @@ import pickle
 import os
 from typing import OrderedDict
 import models
-from models.aggregators import FedEAggregator
+from models.aggregators import Aggregator
 import utils
 import random
 from tqdm import tqdm
@@ -467,9 +467,10 @@ def learn(model_id):
         state_dicts.append(local_state_dict)
 
     # aggregate local model with weights
-    aggregated_state_dict = FedEAggregator()(state_dicts)
+    aggregated_state_dict = Aggregator()(state_dicts)
     local_model = models.load_model(model_name)
     local_model.set_state_dict(aggregated_state_dict)
+    local_model.requires_grad_()
 
     # peers_models = []
     # for w in state_dicts:

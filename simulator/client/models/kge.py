@@ -52,6 +52,10 @@ class KGEModel(nn.Module):
         self.entity_embedding = state_dict["entity_embedding"]
         self.relation_embedding = state_dict["relation_embedding"]
 
+    def requires_grad_(self):
+        self.entity_embedding.requires_grad_()
+        self.relation_embedding.requires_grad_()
+
     def save_checkpoint(self, state_dir):
         state_dict = self.get_state_dict()
 
