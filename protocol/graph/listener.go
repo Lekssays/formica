@@ -14,10 +14,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const (
-	GOSHIMMER_WEBSOCKETS_ENDPOINT = "0.0.0.0:8081"
-)
-
 type Data struct {
 	ID          string `json:"id,omitempty"`
 	Value       int    `json:"value,omitempty"`
@@ -29,7 +25,7 @@ type GHResponse struct {
 	Data Data   `json:"data,omitempty"`
 }
 
-var addr = flag.String("addr", GOSHIMMER_WEBSOCKETS_ENDPOINT, "http service address")
+var addr = flag.String("addr", os.Getenv("GOSHIMMER_WEBSOCKETS_ENDPOINT"), "http service address")
 
 func RunLiveFeed(wg *sync.WaitGroup) {
 	flag.Parse()

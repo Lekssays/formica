@@ -51,7 +51,7 @@ type Peer struct {
 }
 
 func GetModelUpdate(blockID string) (mupb.ModelUpdate, error) {
-	goshimAPI := client.NewGoShimmerAPI(GOSHIMMER_NODE)
+	goshimAPI := client.NewGoShimmerAPI(os.Getenv("GOSHIMMER_API_ENDPOINT"))
 	blockRaw, _ := goshimAPI.GetBlock(blockID)
 	payload := new(formica.Payload)
 	err := payload.FromBytes(blockRaw.Payload)
@@ -96,7 +96,7 @@ func AddModelUpdateEdge(blockID string, graph Graph) (bool, error) {
 func SaveModelUpdate(blockID string, modelUpdate mupb.ModelUpdate) error {
 	ctx := context.Background()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "0.0.0.0:6379",
+		Addr:     os.Getenv("REDIS_ENDPOINT"),
 		Password: "",
 		DB:       0,
 	})
@@ -128,7 +128,7 @@ func SaveModelUpdate(blockID string, modelUpdate mupb.ModelUpdate) error {
 func RetrieveModelUpdate(modelID string, blockID string) (*mupb.ModelUpdate, error) {
 	ctx := context.Background()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "0.0.0.0:6379",
+		Addr:     os.Getenv("REDIS_ENDPOINT"),
 		Password: "",
 		DB:       0,
 	})
@@ -153,7 +153,7 @@ func RetrieveModelUpdate(modelID string, blockID string) (*mupb.ModelUpdate, err
 }
 
 func SendModelUpdate(mupdate mupb.ModelUpdate) (string, error) {
-	url := GOSHIMMER_NODE + "/formica"
+	url := os.Getenv("GOSHIMMER_API_ENDPOINT") + "/formica"
 
 	modelUpdateBytes, err := proto.Marshal(&mupdate)
 	if err != nil {
@@ -199,7 +199,7 @@ func SendModelUpdate(mupdate mupb.ModelUpdate) (string, error) {
 func GetModelUpdatesBlockIDs(modelID string) ([]string, error) {
 	ctx := context.Background()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "0.0.0.0:6379",
+		Addr:     os.Getenv("REDIS_ENDPOINT"),
 		Password: "",
 		DB:       0,
 	})
@@ -239,7 +239,7 @@ func GetModelUpdates(modelID string) ([]*mupb.ModelUpdate, error) {
 func StoreClientID(id uint32, pubkey string, modelID string) error {
 	ctx := context.Background()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "0.0.0.0:6379",
+		Addr:     os.Getenv("REDIS_ENDPOINT"),
 		Password: "",
 		DB:       0,
 	})
@@ -326,7 +326,7 @@ func GetClients(modelID string) ([]string, error) {
 func GetClientID(pubkey string, modelID string) (uint32, error) {
 	ctx := context.Background()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "0.0.0.0:6379",
+		Addr:     os.Getenv("REDIS_ENDPOINT"),
 		Password: "",
 		DB:       0,
 	})
@@ -353,7 +353,7 @@ func GetClientID(pubkey string, modelID string) (uint32, error) {
 func GetClientPubkey(id int, modelID string) (string, error) {
 	ctx := context.Background()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "0.0.0.0:6379",
+		Addr:     os.Getenv("REDIS_ENDPOINT"),
 		Password: "",
 		DB:       0,
 	})

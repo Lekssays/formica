@@ -13,3 +13,4 @@ simulator/ipfs/*
 protocol/consensus/peers.json
 simulator/peers.json
 simulator/client/peers.json
+simulator/docker-compose.yaml

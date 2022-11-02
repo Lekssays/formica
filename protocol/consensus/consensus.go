@@ -11,6 +11,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -39,7 +40,6 @@ const (
 	ALIGNMENT_PURPOSE_ID  = 23
 	GRADIENTS_PURPOSE_ID  = 24
 	PHI_PURPOSE_ID        = 25
-	IPFS_ENDPOINT         = "http://0.0.0.0:5001"
 )
 
 type Payload struct {
@@ -221,7 +221,7 @@ func ComputeTrust(modelID string, algnScore []float64) (map[string]float32, erro
 func GetScorePath(modelID string, scoreType string) (*scpb.Score, error) {
 	ctx := context.Background()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "0.0.0.0:6379",
+		Addr:     os.Getenv("REDIS_ENDPOINT"),
 		Password: "",
 		DB:       0,
 	})
@@ -247,7 +247,7 @@ func GetScorePath(modelID string, scoreType string) (*scpb.Score, error) {
 }
 
 func StoreScoreOnTangle(score scpb.Score) (string, error) {
-	url := GOSHIMMER_NODE + "/formica"
+	url := os.Getenv("GOSHIMMER_API_ENDPOINT") + "/formica"
 
 	scoreBytes, err := proto.Marshal(&score)
 	if err != nil {
@@ -296,7 +296,7 @@ func isScore(purpose uint32) bool {
 }
 
 func GetScoreByBlockID(blockID string) (scpb.Score, error) {
-	goshimAPI := client.NewGoShimmerAPI(GOSHIMMER_NODE)
+	goshimAPI := client.NewGoShimmerAPI(os.Getenv("GOSHIMMER_API_ENDPOINT"))
 	blockRaw, _ := goshimAPI.GetBlock(blockID)
 	payload := new(formica.Payload)
 	err := payload.FromBytes(blockRaw.Payload)
@@ -317,7 +317,7 @@ func GetScoreByBlockID(blockID string) (scpb.Score, error) {
 }
 
 func GetContentIPFS(path string) ([]byte, error) {
-	url := IPFS_ENDPOINT + "/api/v0/get?arg=" + path
+	url := os.Getenv("IPFS_API_ENDPOINT") + "/api/v0/get?arg=" + path
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte{}))
 
 	client := &http.Client{}
@@ -332,7 +332,7 @@ func GetContentIPFS(path string) ([]byte, error) {
 }
 
 func AddContentIPFS(content []byte) (string, error) {
-	sh := shell.NewShell(IPFS_ENDPOINT)
+	sh := shell.NewShell(os.Getenv("IPFS_API_ENDPOINT"))
 	reader := bytes.NewReader(content)
 	response, err := sh.Add(reader)
 	if err != nil {
@@ -344,7 +344,7 @@ func AddContentIPFS(content []byte) (string, error) {
 func StoreScoreLocally(modelID string, score scpb.Score) error {
 	ctx := context.Background()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "0.0.0.0:6379",
+		Addr:     os.Getenv("REDIS_ENDPOINT"),
 		Password: "",
 		DB:       0,
 	})
@@ -538,7 +538,7 @@ func GetLatestTrustScores(modelID string) (map[string]float32, error) {
 func GetLatestRoundTimestamp(modelID string) (uint32, error) {
 	ctx := context.Background()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "0.0.0.0:6379",
+		Addr:     os.Getenv("REDIS_ENDPOINT"),
 		Password: "",
 		DB:       0,
 	})
@@ -565,7 +565,7 @@ func GetLatestRoundTimestamp(modelID string) (uint32, error) {
 func StoreLatestRoundTimestamp(modelID string, timestamp uint32) error {
 	ctx := context.Background()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "0.0.0.0:6379",
+		Addr:     os.Getenv("REDIS_ENDPOINT"),
 		Password: "",
 		DB:       0,
 	})

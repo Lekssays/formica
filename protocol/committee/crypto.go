@@ -24,7 +24,7 @@ func GenerateRSAKeyPair() (*rsa.PrivateKey, *rsa.PublicKey) {
 func SaveKey(content string, key string) (bool, error) {
 	var ctx = context.Background()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     REDIS_ENDPOINT,
+		Addr:     os.Getenv("REDIS_ENDPOINT"),
 		Password: "",
 		DB:       0,
 	})
@@ -40,7 +40,7 @@ func SaveKey(content string, key string) (bool, error) {
 func GetKey(key string) (string, error) {
 	var ctx = context.Background()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     REDIS_ENDPOINT,
+		Addr:     os.Getenv("REDIS_ENDPOINT"),
 		Password: "",
 		DB:       0,
 	})
@@ -56,7 +56,7 @@ func GetKey(key string) (string, error) {
 func SaveKeyBytes(content []byte, key string) (bool, error) {
 	var ctx = context.Background()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     REDIS_ENDPOINT,
+		Addr:     os.Getenv("REDIS_ENDPOINT"),
 		Password: "",
 		DB:       0,
 	})
@@ -72,7 +72,7 @@ func SaveKeyBytes(content []byte, key string) (bool, error) {
 func GetKeyBytes(key string) ([]byte, error) {
 	var ctx = context.Background()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     REDIS_ENDPOINT,
+		Addr:     os.Getenv("REDIS_ENDPOINT"),
 		Password: "",
 		DB:       0,
 	})
