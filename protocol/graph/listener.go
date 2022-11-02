@@ -14,6 +14,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+
 type Data struct {
 	ID          string `json:"id,omitempty"`
 	Value       int    `json:"value,omitempty"`
