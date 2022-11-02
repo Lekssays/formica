@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"os"
 
 	"github.com/Lekssays/formica/protocol/plugins/formica"
 	vpb "github.com/Lekssays/formica/protocol/proto/vote"
@@ -16,8 +17,6 @@ import (
 )
 
 const (
-	GOSHIMMER_NODE                = "http://0.0.0.0:8080"
-	GOSHIMMER_WEBSOCKETS_ENDPOINT = "0.0.0.0:8081"
 	LEVELDB_ENDPOINT              = "./../ldb"
 	VOTE_PURPOSE_ID               = 18
 )
@@ -28,7 +27,7 @@ type Block struct {
 }
 
 func SendVote(votePayload vpb.Vote) (string, error) {
-	url := GOSHIMMER_NODE + "/formica"
+	url := os.Getenv("GOSHIMMER_API_ENDPOINT") + "/formica"
 
 	payload := Block{
 		Purpose: VOTE_PURPOSE_ID,
@@ -60,7 +59,7 @@ func SendVote(votePayload vpb.Vote) (string, error) {
 }
 
 func GetVote(blockID string) (vpb.Vote, error) {
-	goshimAPI := client.NewGoShimmerAPI(GOSHIMMER_NODE)
+	goshimAPI := client.NewGoShimmerAPI(os.Getenv("GOSHIMMER_API_ENDPOINT"))
 	blockRaw, _ := goshimAPI.GetBlock(blockID)
 	payload := new(formica.Payload)
 	err := payload.FromBytes(blockRaw.Payload)

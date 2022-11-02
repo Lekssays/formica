@@ -8,7 +8,6 @@ import (
 )
 
 const (
-	GOSHIMMER_NODE   = "http://0.0.0.0:8080"
 	LEVELDB_ENDPOINT = "./../ldb"
 	INF              = 1e6
 )

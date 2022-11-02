@@ -3,20 +3,17 @@ package committee
 import (
 	"context"
 	"log"
+	"os"
 
 	peerpb "github.com/Lekssays/formica/protocol/proto/peer"
-	"github.com/go-redis/redis/v8"
+	redis "github.com/go-redis/redis/v8"
 	"github.com/golang/protobuf/proto"
-)
-
-const (
-	REDIS_ENDPOINT = "127.0.0.1:6379"
 )
 
 func SavePeer(peer peerpb.Peer) (bool, error) {
 	var ctx = context.Background()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     REDIS_ENDPOINT,
+		Addr:     os.Getenv("REDIS_ENDPOINT"),
 		Password: "",
 		DB:       0,
 	})
@@ -34,7 +31,7 @@ func SavePeer(peer peerpb.Peer) (bool, error) {
 func GetPeers() ([]peerpb.Peer, error) {
 	var ctx = context.Background()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     REDIS_ENDPOINT,
+		Addr:     os.Getenv("REDIS_ENDPOINT"),
 		Password: "",
 		DB:       0,
 	})

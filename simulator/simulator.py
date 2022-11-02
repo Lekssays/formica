@@ -42,7 +42,7 @@ def parse_args():
                         required = False)
     parser.add_argument('-at', '--attack_type',
                         dest = "attack_type",
-                        help = "Attack type: lf , backdoor, untargeted, untargeted_sybil",
+                        help = "Attack type: lf , backdoor, untargeted, untargeted_sybil, None",
                         default = None,
                         required = False)
     parser.add_argument('-ap', '--attack_percentage',
@@ -53,7 +53,7 @@ def parse_args():
     parser.add_argument('-dc', '--dynamic_committee',
                         dest = "dc",
                         help = "Enable dynamic committee",
-                        default = "true",
+                        default = "false",
                         required = False)
     return parser.parse_args()
 
@@ -173,7 +173,7 @@ def copy_peers():
 
 
 async def send_log(message: str, filename="system.log"):
-    uri = "ws://0.0.0.0:7777"
+    uri = os.getenv("LOG_SERVER_ENDPOINT")
     dt = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
     message = dt + " - [" + os.getenv("MY_NAME") + "] " + message + "!" + filename
     async with websockets.connect(uri) as websocket:
