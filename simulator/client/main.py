@@ -95,7 +95,15 @@ def parse_args():
                         help = "number of negative sample for training KGE",
                         default=256,
                         type=int)
-
+    parser.add_argument('-hd', '--hidden_dim',
+                        dest = "hidden_dim",
+                        help = "size of embeddings",
+                        default=128,
+                        type=float)
+    parser.add_argument('-de', '--device',
+                        dest = "device",
+                        help = "device",
+                        default="cpu")
     parser.add_argument('--lr', "--learning_rate",
                         dest="learning_rate",
                         help='learning rate for training KGE on FedE, Isolation or Collection',
@@ -125,6 +133,8 @@ def generate_config():
     adversarial_temperature = parse_args().adversarial_temperature
     num_neg = parse_args().num_neg
     lr = parse_args().learning_rate
+    hidden_dim = parse_args().hidden_dim
+    device_name = parse_args().device
 
     config = {
         'dataset': dataset,
@@ -142,6 +152,8 @@ def generate_config():
         'adversarial_temperature': adversarial_temperature,
         'num_neg': num_neg,
         'lr': lr,
+        'hidden_dim': hidden_dim,
+        'device': device_name,
     }
 
     f = open('config.json', 'w')
@@ -160,6 +172,8 @@ def main():
     if not exists(os.getenv("TMP_FOLDER") + model_id + ".dat"):
         local_model = learning.initialize(model_id)
         entity_freq = learning.get_entity_freq()
+
+        # if agg_mode != "Isolation":
         block_id = utils.publish_model_update(
             modelID=model_id,
             parents=[],
@@ -168,7 +182,7 @@ def main():
             accuracy=0.0,
         )
         utils.store_my_latest_accuracy(accuracy=0.00)
-        utils.store_weight_id(modelID=model_id, blockID=block_id)
+        utils.store_weight_id(model_id=model_id, block_id=block_id)
 
     learning.learn(model_id=model_id)
 

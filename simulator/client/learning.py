@@ -451,6 +451,7 @@ def get_publishing_data(local_model, local_entity_freq):
 
 def learn(model_id):
     model_name = utils.get_parameter(param="model")
+    agg_mode = utils.get_parameter("aggregation_mode")
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -460,9 +461,10 @@ def learn(model_id):
 
     state_dicts, indices, parents = utils.get_weights_to_train(model_id=model_id)
 
+    print("num weights from .dat:", len(state_dicts))
     # load local model
     model_state_path = utils.get_model_state_path(model_id)
-    if exists(model_state_path) and len(state_dicts) > 0:
+    if exists(model_state_path):
         local_state_dict = torch.load(model_state_path)
         state_dicts.append(local_state_dict)
 

@@ -5,7 +5,7 @@ import utils
 class Aggregator:
     def __init__(self):
         config = utils.get_config()
-        self.num_entities = config["num_entities"]
+        self.num_entities = config["metadata"]["num_entities"]
         self.model_name = config["model"]
         self.hidden_dim = config["hidden_dim"]
         self.device = torch.device(config["device"])
@@ -47,6 +47,7 @@ class Aggregator:
         return state_dicts[-1]
 
     def __call__(self, state_dicts):
+        print("Do ", self.aggregation_mode)
         if self.aggregation_mode == "FedE":
             return self.fede_aggregate(state_dicts)
         elif self.aggregation_mode == "Isolation":
