@@ -59,6 +59,9 @@ class KGEModel(nn.Module):
     def save_checkpoint(self, state_dir):
         state_dict = self.get_state_dict()
 
+        if not os.path.exists(state_dir):
+            os.makedirs(state_dir)
+
         state_path = os.path.join(state_dir, "{}.pt".format(self.model_id))
 
         torch.save(state_dict, state_path)

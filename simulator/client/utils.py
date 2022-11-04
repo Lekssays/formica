@@ -186,24 +186,27 @@ def get_gradients(path: str) -> torch.Tensor:
 
 
 def get_weights_ids(model_id, limit):
-    weights = []
-    with open(os.getenv("TMP_FOLDER") + model_id + ".dat", "r") as f:
+    weight_ids = []
+    path = os.path.join(os.getenv("TMP_FOLDER"), "{}.dat".format(model_id))
+    with open(path, "r") as f:
         content = f.readlines()
         for line in content:
             line = line.strip()
-            if line not in weights and len(line) > 0:
-                weights.append(line)
+            if line not in weight_ids and len(line) > 0:
+                weight_ids.append(line)
 
-    if limit >= len(weights):
-        return weights
+    if limit >= len(weight_ids):
+        return weight_ids
 
-    weights.reverse()
-    return weights[:limit]
+    weight_ids.reverse()
+    return weight_ids[:limit]
 
 
-def store_weight_id(modelID, blockID):
-    f = open(os.getenv("TMP_FOLDER") + modelID + ".dat", "a")
-    f.write(blockID + "\n")
+def store_weight_id(model_id, block_id):
+    path = os.path.join(os.getenv("TMP_FOLDER"), "{}.dat".format(model_id))
+
+    f = open(path, "a")
+    f.write(block_id + "\n")
     f.close()
 
 
@@ -228,11 +231,11 @@ def get_weights_to_train(model_id: str):
 
     limit = min(LIMIT_SELECTED, len(metrics))
     metrics = metrics[:limit]
-
+    print(metrics)
     for m in metrics:
-        mu = get_model_update(block_id=m['blockID'])
+        mu = get_model_update(block_id=m['blockID']) #! Why do we need to get it again?
         idx = get_client_id(pubkey=mu.pubkey)
-        if idx != int(os.getenv("MY_ID")):
+        if idx != int(os.getenv("MY_ID")): # the idx is not the one of current peer
             # get a tensor stored in ipfs
             w = get_published_data_dict(path=mu.model)
             if len(w) == 46:
@@ -241,6 +244,7 @@ def get_weights_to_train(model_id: str):
             indices.append(idx)
             parents.append(m['blockID'])
             timestamps.append(m['timestamp'])
+            # print(idx, os.getenv("MY_ID"))
 
     if len(weights) > 0:
         c = list(zip(weights, indices, parents, timestamps))
@@ -324,7 +328,7 @@ def process_message(message):
     if int(purpose) in [MODEL_UPDATE_PYTHON_PURPOSE_ID, MODEL_UPDATE_GOLANG_PURPOSE_ID]:
         if payload.pubkey != os.getenv("MY_PUB_KEY"):
             store_resource_on_redis(blockID, payload_bytes)
-            store_weight_id(modelID=payload.modelID, blockID=blockID)
+            store_weight_id(model_id=payload.modelID, block_id=blockID)
     elif int(purpose) in [TRUST_PURPOSE_ID, SIMILARITY_PURPOSE_ID, PHI_PURPOSE_ID, ALIGNMENT_PURPOSE_ID]:
         if int(purpose) == TRUST_PURPOSE_ID:
             store_resource_on_redis("trust", payload_bytes)
