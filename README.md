@@ -39,22 +39,10 @@ cp -R $HOME/formica/protocol/plugins/formica $HOME/goshimmer/plugins/formica
     go get github.com/Lekssays/formica/protocol/plugins/formica
     ```
 
-- Run GoShimmer Network:
-
-```
-cd $HOME/goshimmer/tools/docker-network && ./run.sh
-```
-
 - Create formica network
 
 ```
 docker network create -d bridge formica
-```
-
-- Run IPFS node:
-
-```
-docker run -d --name ipfs.formica.io --network="formica" -v /data/repositories/formica/simulator/ipfs/export:/export -v /data/repositories/formica/simulator/ipfs/data:/data/ipfs -p 4001:4001 -p 4001:4001/udp -p 0.0.0.0:8088:8088 -p 0.0.0.0:5001:5001 ipfs/go-ipfs:latest
 ```
 
 - Install Python Dependecies:
@@ -69,16 +57,35 @@ cd $HOME/formica/simulator/ && pip3 install -r requirements.txt
 
 - Rename `example.env` to `.env` and execute `source .env`
 
-- Start Log Server:
-
-```
-cd $HOME/formica/logs/ && python3 server.py
-```
-
 - Install golang dependencies
 
 ```
 cd $HOME/formica/protocol/ && go mod tidy && go build
+```
+
+
+## Run formica
+- Create your own environment file .env based on example.env and load .env file:
+```
+source .env
+```
+
+- Run GoShimmer Network:
+
+```
+cd $HOME/goshimmer/tools/docker-network && ./run.sh
+```
+
+- Run IPFS node:
+
+```
+docker run -d --name ipfs.formica.io --network="formica" -v /data/repositories/formica/simulator/ipfs/export:/export -v /data/repositories/formica/simulator/ipfs/data:/data/ipfs -p 4001:4001 -p 4001:4001/udp -p 0.0.0.0:8088:8088 -p 0.0.0.0:5001:5001 ipfs/go-ipfs:latest
+```
+
+- Start Log Server:
+
+```
+cd $HOME/formica/logs/ && python3 server.py
 ```
 
 - Start formica Host Listener
@@ -87,7 +94,6 @@ cd $HOME/formica/protocol/ && go mod tidy && go build
 cd $HOME/formica/protocol/ && ./protocol listener
 ```
 
-## Run formica
 
 - To test if formica works, run:
 

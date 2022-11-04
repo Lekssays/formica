@@ -58,7 +58,7 @@ def parse_args():
     parser.add_argument('-dc', '--dynamic_committee',
                         dest = "dc",
                         help = "Enable dynamic committee",
-                        default = "true",
+                        default = "false",
                         required = False)
     return parser.parse_args()
 
@@ -130,6 +130,7 @@ def generate_peers_configs(peers: list, num_peers: int, dishonest_peers: list) -
         content = content.replace("peer_name", peers[i]['name'])
         content = content.replace("peer_id", peers[i]['id'])
         content = content.replace("my_pub_key", peers[i]['pubkey'])
+        content = content.replace("my_log_server_endpoint", os.getenv("LOG_SERVER_ENDPOINT"))
         if len(dishonest_peers) > 0:
             content = content.replace("dishonest_peers", ",".join(dishonest_peers))
         config_file.close()
@@ -146,7 +147,6 @@ def generate_docker_compose(configs: list):
     for config in configs:
         main_config += config + "\n"
     write(filename="docker-compose.yaml", content=main_config)
-
 
 def generate_peers(num_peers: int):
     peers = []
@@ -178,7 +178,8 @@ def copy_peers():
 
 
 async def send_log(message: str, filename="system.log"):
-    uri = "ws://0.0.0.0:7777"
+    uri = os.getenv("LOG_SERVER_ENDPOINT")
+    # uri = "ws://{}:7777"
     dt = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
     message = dt + " - [" + os.getenv("MY_NAME") + "] " + message + "!" + filename
     async with websockets.connect(uri) as websocket:

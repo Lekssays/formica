@@ -9,6 +9,7 @@
     - GOSHIMMER_WEBSOCKETS_ENDPOINT=ws://193.206.183.35:8091/ws
     - IPFS_API_ENDPOINT=http://193.206.183.35:5001
     - FORMICA_ENDPOINT=http://193.206.183.35:8090/formica
+    - LOG_SERVER_ENDPOINT=my_log_server_endpoint
     - TMP_FOLDER=/temp/
     - DATA_FOLDER=/data/
     - DISHONEST_PEERS=dishonest_peers

@@ -349,7 +349,8 @@ def store_my_latest_accuracy(accuracy: float):
 
 
 async def send_log(message: str):
-    uri = "ws://172.19.0.1:7777"
+    uri = os.getenv("LOG_SERVER_ENDPOINT")
+    # uri = "ws://172.19.0.1:7777"
     dt = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
     message = dt + " - [" + os.getenv("MY_NAME") + "] " + message
     async with websockets.connect(uri) as websocket:
