@@ -25,14 +25,18 @@ torch.manual_seed(42)
 np.random.seed(42)
 
 
-def peer_update(local_model, train_loader, epoch=1, attack_type=None):
+def peer_update(local_model, train_loader, val_loader, epochs=1, early_stop_patience=1, check_per_epoch=1, attack_type=None):
     print(os.getenv("MY_NAME"), "attack_type", attack_type)
     dataset = utils.get_parameter(param="dataset")
     optimizer = get_optimizer(local_model)
     adversarial_temperature = utils.get_parameter(param="adversarial_temperature")
 
-    local_model.train()
-    for _ in range(epoch):
+    best_epoch_id = 0
+    best_mrr = 0
+    bad_count = 0
+
+    # local_model.train()
+    for epoch_id in range(epochs):
         for batch in tqdm(train_loader):
             positive_sample, negative_sample, sample_idx = batch
             positive_sample = positive_sample.to(local_model.device)
@@ -75,6 +79,21 @@ def peer_update(local_model, train_loader, epoch=1, attack_type=None):
             # loss = F.nll_loss(output, target)
             # loss.backward()
             # optimizer.step()
+
+        if epoch_id % check_per_epoch == 0:
+            eval_results, asr = evaluate(local_model, val_loader, loss.item())
+
+            if eval_results["mrr"] > best_mrr:
+                best_mrr = eval_results["mrr"]
+                best_epoch_id = epoch_id
+                bad_count = 0
+            else:
+                bad_count += 1
+
+        if bad_count >= early_stop_patience:
+            break
+
+
 
     return loss.item(), local_model
 
@@ -313,7 +332,7 @@ def get_entity_freq():
 
     return ent_freq
 
-def train(local_model, train_loader, alpha="100", attack_type="lf"):
+def train(local_model, train_loader, val_loader, early_stop_patience, check_per_epoch, alpha="100", attack_type="lf"):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
@@ -350,9 +369,24 @@ def train(local_model, train_loader, alpha="100", attack_type="lf"):
     dishonest_peers = utils.get_dishonest_peers()
     if os.getenv("MY_ID") in dishonest_peers:
         attack += 1
-        loss, local_model = peer_update(local_model=local_model, train_loader=train_loader, epoch=epochs, attack_type=attack_type)
+        loss, local_model = peer_update(
+            local_model=local_model,
+            train_loader=train_loader,
+            val_loader=val_loader,
+            early_stop_patience=early_stop_patience,
+            check_per_epoch=check_per_epoch,
+            epochs=epochs,
+            attack_type=attack_type
+        )
     else:
-        loss, local_model = peer_update(local_model=local_model, train_loader=train_loader, epoch=epochs)
+        loss, local_model = peer_update(
+            local_model=local_model,
+            train_loader=train_loader,
+            val_loader=val_loader,
+            early_stop_patience=early_stop_patience,
+            check_per_epoch=check_per_epoch,
+            epochs=epochs
+        )
 
     return loss, attack, local_model
 
@@ -497,6 +531,9 @@ def learn(model_id):
         loss, attack, local_model = train(
             local_model=local_model,
             train_loader=train_loader,
+            val_loader=valid_dataloader,
+            early_stop_patience=utils.get_parameter(param="patience"),
+            check_per_epoch=utils.get_parameter(param="check_per_epoch"),
             alpha=utils.get_parameter(param="alpha"),
             attack_type=utils.get_parameter(param="attack_type"),
         )

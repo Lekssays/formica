@@ -104,12 +104,21 @@ def parse_args():
                         dest = "device",
                         help = "device",
                         default="cpu")
-    parser.add_argument('--lr', "--learning_rate",
+    parser.add_argument('-lr', "--learning_rate",
                         dest="learning_rate",
                         help='learning rate for training KGE on FedE, Isolation or Collection',
                         default=0.001,
+                        type=float)
+    parser.add_argument('-pa', "--patience",
+                        dest="patience",
+                        help='early stopping patience for early stopping training KGE on FedE, Isolation or Collection',
+                        default=5,
                         type=int)
-
+    parser.add_argument('-cpe', "--check_per_epoch",
+                        dest="check_per_epoch",
+                        help='check per epoch for early stopping training KGE on FedE, Isolation or Collection',
+                        default=1,
+                        type=int)
 
     # args = parser.parse_args()
 
@@ -135,6 +144,8 @@ def generate_config():
     lr = parse_args().learning_rate
     hidden_dim = parse_args().hidden_dim
     device_name = parse_args().device
+    patience = parse_args().patience
+    check_per_epoch = parse_args().check_per_epoch
 
     config = {
         'dataset': dataset,
@@ -154,6 +165,8 @@ def generate_config():
         'lr': lr,
         'hidden_dim': hidden_dim,
         'device': device_name,
+        'patience': patience,
+        'check_per_epoch': check_per_epoch,
     }
 
     f = open('config.json', 'w')
